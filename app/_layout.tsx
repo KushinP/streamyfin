@@ -522,6 +522,16 @@ function Layout() {
                                           }}
                                         />
                                         <Stack.Screen
+                                          name='(auth)/multiview'
+                                          options={{
+                                            headerShown: false,
+                                            title: "",
+                                            header: () => null,
+                                            autoHideHomeIndicator: true,
+                                            animation: "fade",
+                                          }}
+                                        />
+                                        <Stack.Screen
                                           name='(auth)/now-playing'
                                           options={{
                                             headerShown: false,

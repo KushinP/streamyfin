@@ -1,17 +1,22 @@
+import { Ionicons } from "@expo/vector-icons";
 import { getLiveTvApi } from "@jellyfin/sdk/lib/utils/api";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ItemImage } from "@/components/common/ItemImage";
 import { Text } from "@/components/common/Text";
+import useRouter from "@/hooks/useAppRouter";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
 
 export default function LiveTvChannelsPage() {
   const [api] = useAtom(apiAtom);
   const [user] = useAtom(userAtom);
   const _insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const router = useRouter();
 
   const { data: channels } = useQuery({
     queryKey: ["livetv", "channels"],
@@ -33,6 +38,20 @@ export default function LiveTvChannelsPage() {
     <View className='flex flex-1'>
       <FlashList
         data={channels?.Items}
+        ListHeaderComponent={
+          // Multiview renders several MPV players at once; the TV builds
+          // have their own Live TV pages and no multiview yet.
+          Platform.isTV ? null : (
+            <Pressable
+              onPress={() => router.push("/multiview")}
+              accessibilityRole='button'
+              className='flex flex-row items-center mx-4 my-3 px-4 py-3 rounded-xl bg-purple-600'
+            >
+              <Ionicons name='grid-outline' size={20} color='white' />
+              <Text className='ml-3 font-bold'>{t("multiview.open")}</Text>
+            </Pressable>
+          )
+        }
         renderItem={({ item }) => (
           <View className='flex flex-row items-center px-4 mb-2'>
             <View className='w-22 mr-4 rounded-lg overflow-hidden'>

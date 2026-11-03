@@ -3,12 +3,23 @@ import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import { getLibraryApi, getLiveTvApi } from "@jellyfin/sdk/lib/utils/api";
 import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Input } from "@/components/common/Input";
 import { ItemImage } from "@/components/common/ItemImage";
 import { Text } from "@/components/common/Text";
+import { Loader } from "@/components/Loader";
+import {
+  MULTIVIEW_SEARCH_DEBOUNCE,
+  MULTIVIEW_SEARCH_LIMIT,
+} from "@/constants/Multiview";
 import { apiAtom, userAtom } from "@/utils/atoms/api";
+import {
+  filterChannels,
+  type MultiviewPickerTab,
+} from "@/utils/multiview/picker";
 
 interface Props {
   visible: boolean;
@@ -18,16 +29,41 @@ interface Props {
   onClose: () => void;
 }
 
+const TAB_LABEL_KEYS: Record<MultiviewPickerTab, string> = {
+  tv: "live_tv.title",
+  media: "multiview.tab_media",
+};
+
 /**
- * What can go in a tile: the live channels, with what is on now, and what the
- * user is part way through. Tuner limits are the server's to enforce; a third
- * live channel on a dual tuner fails in its tile with the server's answer.
+ * What can go in a tile, on two tabs: the live channels, with what is on now,
+ * and the library, which starts on what the user is part way through. One
+ * search box serves both; it filters the channels in place and searches the
+ * server for movies and episodes. Tuner limits are the server's to enforce; a
+ * third live channel on a dual tuner fails in its tile with the server's
+ * answer.
  */
 export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
   const { t } = useTranslation();
   const api = useAtomValue(apiAtom);
   const user = useAtomValue(userAtom);
   const insets = useSafeAreaInsets();
+  const [tab, setTab] = useState<MultiviewPickerTab>("tv");
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const trimmedQuery = query.trim();
+
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => setDebouncedQuery(trimmedQuery),
+      MULTIVIEW_SEARCH_DEBOUNCE,
+    );
+    return () => clearTimeout(timeout);
+  }, [trimmedQuery]);
+
+  // Each opening starts a fresh search; the tab stays where it was left.
+  useEffect(() => {
+    if (!visible) setQuery("");
+  }, [visible]);
 
   const channels = useQuery({
     queryKey: ["multiview", "channels", user?.Id],
@@ -57,6 +93,37 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
       return res.data.Items ?? [];
     },
   });
+
+  // Movies and episodes only: a series or a season is not one stream, so it
+  // cannot fill a tile.
+  const search = useQuery({
+    queryKey: ["multiview", "search", user?.Id, debouncedQuery],
+    enabled:
+      visible &&
+      tab === "media" &&
+      debouncedQuery.length > 0 &&
+      !!api &&
+      !!user?.Id,
+    queryFn: async ({ signal }) => {
+      const res = await getLibraryApi(api!).getItems(
+        {
+          userId: user?.Id,
+          searchTerm: debouncedQuery,
+          includeItemTypes: ["Movie", "Episode"],
+          recursive: true,
+          limit: MULTIVIEW_SEARCH_LIMIT,
+          enableImageTypes: ["Primary", "Thumb"],
+        },
+        { signal },
+      );
+      return res.data.Items ?? [];
+    },
+  });
+
+  const shownChannels = useMemo(
+    () => filterChannels(channels.data ?? [], trimmedQuery),
+    [channels.data, trimmedQuery],
+  );
 
   const row = (item: BaseItemDto, subtitle?: string | null) => {
     const added = !!item.Id && onScreen.includes(item.Id);
@@ -98,6 +165,44 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
     );
   };
 
+  const note = (text: string) => (
+    <Text className='px-4 py-2 text-neutral-500'>{text}</Text>
+  );
+  const noMatches = note(t("multiview.no_matches", { query: trimmedQuery }));
+  const spinner = (
+    <View className='py-4 items-center'>
+      <Loader />
+    </View>
+  );
+
+  const tvList = () => {
+    if (channels.isLoading) return spinner;
+    if (channels.data?.length === 0) return note(t("live_tv.no_channels"));
+    if (shownChannels.length === 0) return noMatches;
+    return shownChannels.map((c) => row(c, c.CurrentProgram?.Name));
+  };
+
+  const mediaList = () => {
+    if (trimmedQuery) {
+      // Until the pause after typing runs out, the last answer belongs to an
+      // older search, so it is not shown.
+      if (debouncedQuery !== trimmedQuery || search.isLoading) return spinner;
+      if (search.data?.length === 0) return noMatches;
+      return search.data?.map((i) => row(i));
+    }
+    if (resume.isLoading) return spinner;
+    if (resume.data?.length === 0)
+      return note(t("multiview.nothing_in_progress"));
+    return (
+      <>
+        <Text className='px-4 pt-2 pb-2 text-neutral-400 uppercase text-xs'>
+          {t("multiview.continue_watching")}
+        </Text>
+        {resume.data?.map((i) => row(i))}
+      </>
+    );
+  };
+
   return (
     <Modal
       visible={visible}
@@ -122,7 +227,7 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
             paddingRight: insets.right,
           }}
         >
-          <View className='flex flex-row items-center justify-between px-4 mb-2'>
+          <View className='flex flex-row items-center justify-between px-4 mb-3'>
             <Text className='text-lg font-bold'>{t("multiview.add_tile")}</Text>
             <Pressable
               onPress={onClose}
@@ -133,20 +238,53 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
               <Ionicons name='close' size={24} color='white' />
             </Pressable>
           </View>
-          <ScrollView>
-            <Text className='px-4 py-2 text-neutral-400 uppercase text-xs'>
-              {t("multiview.live_channels")}
-            </Text>
-            {channels.data?.length === 0 && (
-              <Text className='px-4 text-neutral-500'>
-                {t("live_tv.no_channels")}
-              </Text>
-            )}
-            {channels.data?.map((c) => row(c, c.CurrentProgram?.Name))}
-            <Text className='px-4 pt-4 pb-2 text-neutral-400 uppercase text-xs'>
-              {t("multiview.continue_watching")}
-            </Text>
-            {resume.data?.map((i) => row(i))}
+          <View className='px-4'>
+            <Input
+              value={query}
+              onChangeText={setQuery}
+              placeholder={
+                tab === "tv"
+                  ? t("multiview.search_channels")
+                  : t("multiview.search_media")
+              }
+              autoCorrect={false}
+              autoCapitalize='none'
+              returnKeyType='search'
+              extraClassName='bg-neutral-800 py-2.5'
+            />
+          </View>
+          <View
+            accessibilityRole='tablist'
+            className='flex flex-row mx-4 mt-3 mb-2 p-1 rounded-xl bg-neutral-800'
+          >
+            {(["tv", "media"] as const).map((option) => {
+              const selected = option === tab;
+              return (
+                <Pressable
+                  key={option}
+                  accessibilityRole='tab'
+                  accessibilityState={{ selected }}
+                  onPress={() => setTab(option)}
+                  className={`flex-1 items-center py-1.5 rounded-lg ${
+                    selected ? "bg-neutral-600" : ""
+                  }`}
+                >
+                  <Text
+                    numberOfLines={1}
+                    className={`text-sm font-semibold ${
+                      selected ? "text-white" : "text-neutral-400"
+                    }`}
+                  >
+                    {t(TAB_LABEL_KEYS[option])}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {/* Taps reach a row while the keyboard is up, instead of only
+              dismissing it. */}
+          <ScrollView keyboardShouldPersistTaps='handled'>
+            {tab === "tv" ? tvList() : mediaList()}
           </ScrollView>
         </View>
       </View>

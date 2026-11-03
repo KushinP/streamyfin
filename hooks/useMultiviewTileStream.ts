@@ -1,4 +1,7 @@
-import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
+import type {
+  BaseItemDto,
+  MediaSourceInfo,
+} from "@jellyfin/sdk/lib/generated-client/models";
 import { getLibraryApi, getSessionApi } from "@jellyfin/sdk/lib/utils/api";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,7 +17,13 @@ import { secondsToTicks, ticksToSeconds } from "@/utils/time";
 type TileStreamState =
   | { status: "loading" }
   | { status: "error" }
-  | { status: "ready"; item: BaseItemDto; source: MpvVideoSource };
+  | {
+      status: "ready";
+      item: BaseItemDto;
+      source: MpvVideoSource;
+      /** What the server is sending, its subtitle streams among it. */
+      mediaSource: MediaSourceInfo | undefined;
+    };
 
 const errorText = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -96,6 +105,7 @@ export const useMultiviewTileStream = (itemId: string) => {
         setState({
           status: "ready",
           item,
+          mediaSource: stream.mediaSource,
           source: buildTileSource(stream, {
             basePath: api.basePath,
             accessToken: api.accessToken,

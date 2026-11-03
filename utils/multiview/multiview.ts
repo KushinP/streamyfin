@@ -6,7 +6,8 @@ import {
 
 /**
  * "grid" gives every tile the same size (side by side for two, 2x2 for more).
- * "focus" makes the first tile big and stacks the rest down the right side.
+ * "focus" makes the first tile big and stacks the rest down the right side;
+ * switching to it brings the tile being heard first.
  */
 export type MultiviewLayout = "grid" | "focus";
 
@@ -115,10 +116,32 @@ export const promoteTile = (
   };
 };
 
-export const toggleLayout = (state: MultiviewState): MultiviewState => ({
-  ...state,
-  layout: state.layout === "grid" ? "focus" : "grid",
-});
+/**
+ * Switches between the grid and the focus layout. Going to focus enlarges the
+ * tile being heard, since that is the one being watched; with every tile heard
+ * there is no such tile, so the first one keeps its place.
+ */
+export const toggleLayout = (state: MultiviewState): MultiviewState => {
+  if (state.layout === "focus") return { ...state, layout: "grid" };
+  const heard =
+    state.audio === "all" || state.audio === null
+      ? state
+      : promoteTile(state, state.audio);
+  return { ...heard, layout: "focus" };
+};
+
+/**
+ * What a tap on a tile does. In the focus layout a small tile is one level
+ * away from being watched, so a tap brings it to the big spot (as in Apple TV
+ * multiview); otherwise a tap picks which tile is heard. Hearing every tile
+ * stays a choice the tap does not undo.
+ */
+export const tapTile = (state: MultiviewState, key: string): MultiviewState => {
+  if (state.layout === "focus" && state.tiles[0]?.key !== key) {
+    return promoteTile(state, key);
+  }
+  return state.audio === "all" ? state : selectAudio(state, key);
+};
 
 /** Largest 16:9 box that fits in the given cell, centred in it. */
 const fit169 = (
@@ -137,6 +160,13 @@ const fit169 = (
   };
 };
 
+/**
+ * Two columns, and one row for two tiles or two rows for more. Every tile
+ * takes the largest 16:9 size the cells allow, and the tiles are packed one
+ * gap apart with the whole block centred: centring each tile in its own cell
+ * instead opens a wide gap down the middle of a screen wider than 16:9, such
+ * as a phone on its side. A short last row is centred under the one above.
+ */
 const gridFrames = (
   count: number,
   width: number,
@@ -144,23 +174,25 @@ const gridFrames = (
   gap: number,
 ): TileFrame[] => {
   if (count === 1) return [fit169(0, 0, width, height)];
-  if (count === 2) {
-    const cellWidth = (width - gap) / 2;
-    return [
-      fit169(0, 0, cellWidth, height),
-      fit169(cellWidth + gap, 0, cellWidth, height),
-    ];
-  }
-  const cellWidth = (width - gap) / 2;
-  const cellHeight = (height - gap) / 2;
-  return Array.from({ length: count }, (_, i) =>
-    fit169(
-      (i % 2) * (cellWidth + gap),
-      Math.floor(i / 2) * (cellHeight + gap),
-      cellWidth,
-      cellHeight,
-    ),
-  );
+  const columns = 2;
+  const rows = Math.ceil(count / columns);
+  const cellWidth = (width - gap * (columns - 1)) / columns;
+  const cellHeight = (height - gap * (rows - 1)) / rows;
+  const tileWidth = Math.min(cellWidth, (cellHeight * 16) / 9);
+  const tileHeight = (tileWidth * 9) / 16;
+  const blockHeight = rows * tileHeight + (rows - 1) * gap;
+  const top = (height - blockHeight) / 2;
+  return Array.from({ length: count }, (_, i) => {
+    const row = Math.floor(i / columns);
+    const inRow = Math.min(columns, count - row * columns);
+    const rowWidth = inRow * tileWidth + (inRow - 1) * gap;
+    return {
+      left: (width - rowWidth) / 2 + (i % columns) * (tileWidth + gap),
+      top: top + row * (tileHeight + gap),
+      width: tileWidth,
+      height: tileHeight,
+    };
+  });
 };
 
 const focusFrames = (

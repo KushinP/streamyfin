@@ -20,6 +20,28 @@ export const MULTIVIEW_TILE_GAP = 4;
 export const MULTIVIEW_TOOLBAR_HIDE_DELAY = 5_000;
 
 /**
+ * How long, in ms, the picker waits after the last keystroke before searching
+ * the library. The same pause as the Search tab.
+ */
+export const MULTIVIEW_SEARCH_DEBOUNCE = 200;
+
+/** How many movies and episodes a picker search lists. */
+export const MULTIVIEW_SEARCH_LIMIT = 30;
+
+/** How far, in seconds, a tile's back button goes. */
+export const MULTIVIEW_SEEK_BACK_SECONDS = 10;
+
+/** How far, in seconds, a tile's forward button goes. */
+export const MULTIVIEW_SEEK_FORWARD_SECONDS = 30;
+
+/**
+ * How long, in ms, a playing tile's picture may stand still before its loading
+ * wheel comes back. Progress ticks come several times a second, so two seconds
+ * without one is a stall, not a slow tick.
+ */
+export const MULTIVIEW_STALL_DELAY = 2_000;
+
+/**
  * Buffer settings for one tile. Each tile is its own MPV instance, so the
  * single-player defaults (up to 150 MB forward each) would multiply by the
  * tile count. These are the lowest values the native player accepts.

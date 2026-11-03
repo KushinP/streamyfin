@@ -75,6 +75,16 @@ describe("useMultiviewTileStream", () => {
     });
   });
 
+  test("hands the tile the stream's media source, which lists its subtitles", async () => {
+    mockGetStreamUrl.mockResolvedValue(liveStream);
+    const { result } = await renderHook(() => useMultiviewTileStream("chan-1"));
+    await waitFor(() => expect(result.current.state.status).toBe("ready"));
+    const state = result.current.state;
+    expect(state.status === "ready" && state.mediaSource).toEqual(
+      liveStream.mediaSource,
+    );
+  });
+
   test("a tile removed while its stream is still opening still releases it", async () => {
     let resolveStream: (value: unknown) => void = () => {};
     mockGetStreamUrl.mockReturnValue(

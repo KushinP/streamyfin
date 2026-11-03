@@ -1491,6 +1491,11 @@
   "multiview": {
     "open": "Open multiview",
     "add_tile": "Add to multiview",
+    "tab_media": "Media",
+    "search_channels": "Search channels",
+    "search_media": "Search movies and episodes",
+    "no_matches": "Nothing matches “{{query}}”",
+    "nothing_in_progress": "You're not part way through anything. Search to find something to watch.",
     "change_layout": "Change layout",
     "audio_all": "Play sound from every tile",
     "audio_one": "Play sound from one tile",
@@ -1501,8 +1506,15 @@
     "tile_starting": "Starting stream",
     "tile_failed": "This stream couldn't be opened. If it's a live channel, every tuner may be in use.",
     "tile_hint": "Tap to hear this tile, press and hold for more options",
+    "play": "Play",
+    "pause": "Pause",
+    "seek_back": "Back {{seconds}} seconds",
+    "seek_forward": "Forward {{seconds}} seconds",
+    "captions": "Captions",
+    "captions_off": "Off",
+    "captions_track": "Track {{number}}",
+    "no_captions": "This one has no captions",
     "on_screen": "On screen",
-    "live_channels": "Live channels",
     "continue_watching": "Continue watching",
     "empty": "Add a channel or a show to start watching"
   }

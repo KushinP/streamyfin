@@ -26,7 +26,7 @@ import {
   type MultiviewState,
   promoteTile,
   removeTile,
-  selectAudio,
+  tapTile,
   tileFrames,
   toggleAllAudio,
   toggleLayout,
@@ -53,6 +53,9 @@ export default function MultiviewScreen() {
   );
   const [pickerOpen, setPickerOpen] = useState(state.tiles.length === 0);
   const [toolbarVisible, setToolbarVisible] = useState(true);
+  // Bumped by a tile's playback control, so the hide timer starts over even
+  // when the press changes nothing in the multiview state.
+  const [lastTouch, setLastTouch] = useState(0);
 
   useEffect(() => {
     void lockOrientation(OrientationLock.LANDSCAPE);
@@ -72,10 +75,15 @@ export default function MultiviewScreen() {
       MULTIVIEW_TOOLBAR_HIDE_DELAY,
     );
     return () => clearTimeout(timer);
-  }, [toolbarVisible, pickerOpen, state]);
+  }, [toolbarVisible, pickerOpen, state, lastTouch]);
+
+  const onTileInteract = useCallback(() => {
+    setToolbarVisible(true);
+    setLastTouch(Date.now());
+  }, []);
 
   const onTilePress = useCallback((key: string) => {
-    setState((s) => (s.audio === "all" ? s : selectAudio(s, key)));
+    setState((s) => tapTile(s, key));
     setToolbarVisible(true);
   }, []);
 
@@ -136,6 +144,7 @@ export default function MultiviewScreen() {
               showLabel={toolbarVisible}
               onPress={() => onTilePress(tile.key)}
               onLongPress={() => onTileLongPress(tile.key)}
+              onInteract={onTileInteract}
             />
           ) : null,
         )}

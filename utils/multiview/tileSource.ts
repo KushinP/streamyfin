@@ -3,6 +3,7 @@ import { MULTIVIEW_TILE_CACHE } from "@/constants/Multiview";
 import type { MpvVideoSource as VideoSource } from "@/modules";
 import { getJellyfinHeadersForUrl } from "@/utils/customHeaders";
 import { withAcceptLanguageForUrl } from "@/utils/jellyfin/acceptLanguage";
+import { getExternalSubtitleUrl } from "@/utils/jellyfin/subtitleUtils";
 
 export interface TileStream {
   url: string;
@@ -40,6 +41,12 @@ export const buildTileSource = (
     Object.assign(headers, stream.requiredHttpHeaders);
   }
   const withLanguage = withAcceptLanguageForUrl(headers, stream.url, basePath);
+  // Sidecar subtitle files are not in the stream, so MPV loads them alongside
+  // it, as the full player does. A tile starts with captions off either way.
+  const externalSubtitles = (stream.mediaSource?.MediaStreams ?? [])
+    .filter((s) => s.Type === "Subtitle" && s.DeliveryMethod === "External")
+    .map((s) => getExternalSubtitleUrl(s, { offline: false, basePath }))
+    .filter((url): url is string => !!url);
 
   return {
     url: stream.url,
@@ -47,5 +54,6 @@ export const buildTileSource = (
     autoplay: true,
     cacheConfig: { ...MULTIVIEW_TILE_CACHE },
     ...(Object.keys(withLanguage).length > 0 && { headers: withLanguage }),
+    ...(externalSubtitles.length > 0 && { externalSubtitles }),
   };
 };

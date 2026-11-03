@@ -7,6 +7,7 @@ import {
   promoteTile,
   removeTile,
   selectAudio,
+  tapTile,
   tileFrames,
   toggleAllAudio,
   toggleLayout,
@@ -79,6 +80,52 @@ describe("multiview tiles", () => {
     expect(focus.layout).toBe("focus");
     expect(toggleLayout(focus).layout).toBe("grid");
   });
+
+  test("switching to focus makes the tile being heard the big one", () => {
+    // Reported: only the left tile could be made bigger, because the focus
+    // layout always enlarged the first tile whatever was being watched.
+    const heard = selectAudio(withTiles("a", "b"), "k-b");
+    const focus = toggleLayout(heard);
+    expect(focus.tiles.map((t) => t.itemId)).toEqual(["b", "a"]);
+    expect(focus.audio).toBe("k-b");
+  });
+
+  test("switching to focus keeps the order when every tile is heard", () => {
+    const all = toggleAllAudio(withTiles("a", "b"));
+    expect(toggleLayout(all).tiles.map((t) => t.itemId)).toEqual(["a", "b"]);
+  });
+
+  test("switching back to grid keeps the order", () => {
+    const focus = toggleLayout(selectAudio(withTiles("a", "b"), "k-b"));
+    expect(toggleLayout(focus).tiles.map((t) => t.itemId)).toEqual(["b", "a"]);
+  });
+});
+
+describe("tapTile", () => {
+  test("in the grid, a tap only changes which tile is heard", () => {
+    const state = tapTile(withTiles("a", "b"), "k-b");
+    expect(state.tiles.map((t) => t.itemId)).toEqual(["a", "b"]);
+    expect(state.audio).toBe("k-b");
+  });
+
+  test("in focus, tapping a small tile makes it the big one and heard", () => {
+    const focus = toggleLayout(withTiles("a", "b", "c"));
+    const state = tapTile(focus, "k-c");
+    expect(state.tiles.map((t) => t.itemId)).toEqual(["c", "a", "b"]);
+    expect(state.audio).toBe("k-c");
+  });
+
+  test("in focus, tapping the big tile leaves the layout alone", () => {
+    const focus = toggleLayout(withTiles("a", "b"));
+    expect(tapTile(focus, "k-a")).toEqual(focus);
+  });
+
+  test("a tap keeps every tile heard when that was the choice", () => {
+    const all = toggleAllAudio(withTiles("a", "b"));
+    expect(tapTile(all, "k-b").audio).toBe("all");
+    const focus = toggleLayout(all);
+    expect(tapTile(focus, "k-b").audio).toBe("all");
+  });
 });
 
 describe("tileFrames", () => {
@@ -125,6 +172,37 @@ describe("tileFrames", () => {
         expect(frame.left + frame.width).toBeLessThanOrEqual(W + 0.001);
       }
     }
+  });
+
+  describe("on a phone in landscape, wider than 16:9", () => {
+    // An iPhone 18 Pro on its side. Its 2x2 cells are wider than 16:9, so
+    // the tiles cannot fill them across. Reported: a wide black gap opened
+    // down the middle, because each tile was centred in its own cell.
+    const PW = 874;
+    const PH = 402;
+    const GAP = 4;
+
+    test("the grid's tiles sit one gap apart, the block centred", () => {
+      const [a, b, c, d] = tileFrames("grid", 4, PW, PH, GAP);
+      expect(b.left - (a.left + a.width)).toBeCloseTo(GAP);
+      expect(c.top - (a.top + a.height)).toBeCloseTo(GAP);
+      expect(a.left).toBeCloseTo(PW - (b.left + b.width));
+      expect(d.left).toBeCloseTo(b.left);
+    });
+
+    test("a third tile sits centred under the first two", () => {
+      const [a, b, c] = tileFrames("grid", 3, PW, PH, GAP);
+      const blockCentre = (a.left + b.left + b.width) / 2;
+      expect(c.left + c.width / 2).toBeCloseTo(blockCentre);
+      expect(c.top - (a.top + a.height)).toBeCloseTo(GAP);
+      expect(c.width).toBeCloseTo(a.width);
+    });
+
+    test("two tiles side by side still sit one gap apart", () => {
+      const [a, b] = tileFrames("grid", 2, PW, PH, GAP);
+      expect(b.left - (a.left + a.width)).toBeCloseTo(GAP);
+      expect(a.top).toBeCloseTo(b.top);
+    });
   });
 
   test("a screen not measured yet has no frames", () => {

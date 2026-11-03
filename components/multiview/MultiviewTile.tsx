@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/common/Text";
@@ -7,6 +7,7 @@ import { Loader } from "@/components/Loader";
 import { useMultiviewTileStream } from "@/hooks/useMultiviewTileStream";
 import { MpvPlayerView, type MpvPlayerViewRef } from "@/modules";
 import type { TileFrame } from "@/utils/multiview/multiview";
+import { createPlaybackStartWatch } from "@/utils/multiview/playbackStart";
 
 interface Props {
   itemId: string;
@@ -36,6 +37,10 @@ export function MultiviewTile({
   // sent before the file loads has nothing to apply to.
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
+  // The stream URL arrives well before the first frame of a live channel, so
+  // the spinner stays until playback is seen to move, not until the URL.
+  const playbackStarted = useRef(createPlaybackStartWatch()).current;
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     void playerRef.current?.setMute(muted);
@@ -69,11 +74,21 @@ export function MultiviewTile({
           source={state.source}
           style={StyleSheet.absoluteFill}
           onLoad={() => void playerRef.current?.setMute(mutedRef.current)}
-          onProgress={(e) => onPosition(e.nativeEvent.position)}
+          onProgress={(e) => {
+            onPosition(e.nativeEvent.position);
+            if (!playing && playbackStarted(e.nativeEvent.position)) {
+              setPlaying(true);
+            }
+          }}
         />
       )}
-      {state.status === "loading" && (
-        <View style={styles.center}>
+      {(state.status === "loading" ||
+        (state.status === "ready" && !playing)) && (
+        <View
+          style={styles.center}
+          accessible
+          accessibilityLabel={t("multiview.tile_starting")}
+        >
           <Loader />
         </View>
       )}

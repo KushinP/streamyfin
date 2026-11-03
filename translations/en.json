@@ -1498,6 +1498,7 @@
     "close_picker": "Close",
     "make_main": "Make this the main tile",
     "remove_tile": "Remove this tile",
+    "tile_starting": "Starting stream",
     "tile_failed": "This stream couldn't be opened. If it's a live channel, every tuner may be in use.",
     "tile_hint": "Tap to hear this tile, press and hold for more options",
     "on_screen": "On screen",

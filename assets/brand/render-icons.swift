@@ -86,9 +86,9 @@ func pane(_ x: CGFloat, _ size: CGFloat) -> (CGRect) -> CGRect {
     { r in CGRect(x: r.minX + r.width * x, y: r.minY + r.height * (1 - size) / 2, width: r.width * size, height: r.height * size) }
 }
 let panes: [Pane] = [
-    Pane(box: pane(-0.10, 0.66), from: c(0x064E3B), to: c(0x059669), alpha: 1, sheen: 0.45),
-    Pane(box: pane(0.15, 0.60), from: c(0x10B981), to: c(0x34D399), alpha: 0.8, sheen: 0.75),
-    Pane(box: pane(0.38, 0.54), from: c(0x6EE7B7), to: c(0xBEF264), alpha: 0.85, sheen: 1),
+    Pane(box: pane(-0.04, 0.66), from: c(0x064E3B), to: c(0x059669), alpha: 1, sheen: 0.45),
+    Pane(box: pane(0.13, 0.60), from: c(0x10B981), to: c(0x34D399), alpha: 0.8, sheen: 0.75),
+    Pane(box: pane(0.30, 0.54), from: c(0x6EE7B7), to: c(0xBEF264), alpha: 0.85, sheen: 1),
 ]
 
 func drawGlyph(_ ctx: CGContext, in r: CGRect) {

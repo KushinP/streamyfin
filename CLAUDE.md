@@ -69,6 +69,7 @@ State and data:
 - `mark-as-played-flow` | PlayedStatus -> useMarkAsPlayed -> playbackManager with optimistic updates
 - `shared-value-js-write-lands-later` | a shared value set from JS is applied later on the UI thread, the next JS read still gets the old one; keep JS-only state in a ref
 - `unobserved-query-reports-its-first-failure` | a query whose key changed under it has no observer left, so React Query cancels its retries and its first failure goes to Sentry; one failing request and an instant event in the breadcrumbs is that
+- `react19-ref-cleared-before-effect-cleanup` | on unmount React 19 nulls object refs before effect cleanups run; destroy a native view from a copy the cleanup captured, not ref.current
 
 Native modules:
 - `expo-view-props-fail-silently` | `try? prop.set()` drops failed prop conversions with NO error; use a JSON string prop
@@ -84,6 +85,7 @@ Native modules:
 - `keychain-accessibility-set-at-creation` | a SecureStore item keeps the accessibility it was created with, `setItem` over it changes only the data; a default item throws on read when iOS launches the app on a locked phone
 - `track-player-queue-is-not-the-app-queue` | the native music queue only holds the tracks loaded so far, so a state queue index does not address it; on iOS `add` past the end rejects with the same message as `skip`
 - `android-js-timers-pause-in-background` | Delayed timers don't fire while the Android app is paused (incl. under the Cast expanded controls); zero-delay ones and fetch still do
+- `android-mpv-one-player-per-process` | MpvOwnership.kt lets one MPV renderer play per Android process, so multiview stays iOS-only (isMultiviewAvailable)
 
 TV platform:
 - `tv-modals-must-use-navigation-pattern` | Use atom+router.push(), never overlay/absolute modals
@@ -104,6 +106,16 @@ Build and tooling:
 Streamyfin is a cross platform Jellyfin client built with Expo and React Native. It runs
 on iOS, Android, Apple TV and Android TV, with offline downloads, Chromecast and
 Seerr integration.
+
+**This checkout is the SuperFin fork.** It installs as its own app next to Streamyfin:
+name SuperFin, bundle id and package `com.kushagra.superfin`, scheme `superfin://`
+(`constants/AppScheme.ts`), its own icon. Native identifiers that must be unique per app
+(the background download session and task ids) derive from the bundle id. Deliberately
+still called Streamyfin: the client name sent to the Jellyfin server, the server plugin
+endpoints, the `streamyfin-pair` QR format, and internal storage keys. Push stays off
+until the fork has its own EAS project id, Android FCM until it has its own Firebase
+file, and Sentry reports nothing unless `EXPO_PUBLIC_SENTRY_DSN` is set. Multiview
+(`app/(auth)/multiview.tsx`) is fork-only and iOS-only.
 
 ## Commands
 

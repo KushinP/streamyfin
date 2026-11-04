@@ -38,6 +38,7 @@ import { Text } from "@/components/common/Text";
 import { CreatePlaylistModal } from "@/components/music/CreatePlaylistModal";
 import { PlaylistPickerSheet } from "@/components/music/PlaylistPickerSheet";
 import { TrackOptionsSheet } from "@/components/music/TrackOptionsSheet";
+import { Colors } from "@/constants/Colors";
 import useRouter from "@/hooks/useAppRouter";
 import { useFavorite } from "@/hooks/useFavorite";
 import { useMusicCast } from "@/hooks/useMusicCast";
@@ -592,7 +593,7 @@ const PlayerView: React.FC<PlayerViewProps> = ({
           <Ionicons
             name='shuffle'
             size={24}
-            color={shuffleEnabled ? "#9334E9" : "#666"}
+            color={shuffleEnabled ? Colors.primary : "#666"}
           />
         </TouchableOpacity>
 
@@ -635,7 +636,7 @@ const PlayerView: React.FC<PlayerViewProps> = ({
           <Ionicons
             name={getRepeatIcon() as any}
             size={24}
-            color={repeatMode !== "off" ? "#9334E9" : "#666"}
+            color={repeatMode !== "off" ? Colors.primary : "#666"}
           />
           {repeatMode === "one" && (
             <View className='absolute right-0 top-1 bg-purple-600 rounded-full w-4 h-4 items-center justify-center'>
@@ -686,7 +687,7 @@ const PlayerView: React.FC<PlayerViewProps> = ({
               <ExpoAvRoutePickerView
                 style={{ width: 24, height: 24 }}
                 tintColor='#666666'
-                activeTintColor='#9334E9'
+                activeTintColor={Colors.primary}
               />
             </View>
           )}
@@ -695,7 +696,7 @@ const PlayerView: React.FC<PlayerViewProps> = ({
             style={{
               width: 24,
               height: 24,
-              tintColor: isCastConnected ? "#9334E9" : "#666",
+              tintColor: isCastConnected ? Colors.primary : "#666",
               transform: [{ translateY: 1 }],
             }}
           />

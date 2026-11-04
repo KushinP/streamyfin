@@ -6,6 +6,7 @@ import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { Image } from "@/components/common/ServerImage";
 import { Text } from "@/components/common/Text";
 import { AnimatedEqualizer } from "@/components/music/AnimatedEqualizer";
+import { Colors } from "@/constants/Colors";
 import { useHaptic } from "@/hooks/useHaptic";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
@@ -195,7 +196,7 @@ export const MusicTrackItem: React.FC<Props> = ({
       {downloadStatus === "downloading" && (
         <ActivityIndicator
           size={14}
-          color='#9334E9'
+          color={Colors.primary}
           style={{ marginRight: 8 }}
         />
       )}

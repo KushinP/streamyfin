@@ -1,15 +1,22 @@
 import type { SeerrStatusTone } from "@/utils/seerr/statusBadge";
 
+// SuperFin's accent, the 500 and 300 steps of the brand scale in
+// tailwind.config.js. Colors.test.ts keeps the two files in step.
+const PRIMARY = "#10b981";
+const PRIMARY_LIGHT = "#6ee7b7";
+
 export const Colors = {
-  primary: "#9334E9",
-  primaryRGB: "rgb(147 51 234)",
-  primaryLightRGB: "rgb(192 132 252)",
+  primary: PRIMARY,
+  primaryRGB: "rgb(16 185 129)",
+  /** The accent on a dark fill, where the primary would sink in. */
+  primaryLight: PRIMARY_LIGHT,
+  primaryLightRGB: "rgb(110 231 183)",
   text: "#ECEDEE",
   background: "#151718",
   tint: "#fff",
   icon: "#9BA1A6",
   tabIconDefault: "#9BA1A6",
-  tabIconSelected: "#9333ea",
+  tabIconSelected: PRIMARY,
   // The LIVE badge of a Live TV program, on the cards and in the TV guide.
   live: "#EF4444",
 };

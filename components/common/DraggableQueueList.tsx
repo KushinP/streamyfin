@@ -8,6 +8,7 @@ import DraggableFlatList, {
 } from "react-native-draggable-flatlist";
 import { Image } from "@/components/common/ServerImage";
 import { Text } from "@/components/common/Text";
+import { Colors } from "@/constants/Colors";
 
 export interface QueueRow {
   /** Unique within the list, and stable while the row moves. */
@@ -47,7 +48,7 @@ interface Props {
   onDragActiveChange?: (active: boolean) => void;
 }
 
-const ACCENT = "#9334E9";
+const ACCENT = Colors.primary;
 /**
  * The strip a row's drag handle sits in, from the row's leading edge: its
  * padding, the handle and the handle's own hit slop.

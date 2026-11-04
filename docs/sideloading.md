@@ -6,7 +6,8 @@ SuperFin is not on the App Store. For personal use there are three ways onto you
 | --- | --- | --- | --- |
 | iPhone, iPad | SideStore or AltStore with the `.ipa` | Re-signed every 7 days, by the app itself | A free Apple ID |
 | iPhone, iPad | Xcode, Run onto the plugged-in device | 7 days, then run it from Xcode again | A free Apple ID, this Mac |
-| Mac (Apple silicon) | Xcode, **My Mac (Designed for iPad)** | Until the signing certificate expires | This Mac |
+| Mac (Apple silicon) | Xcode, **My Mac (Designed for iPad)** | 7 days, renewed on its own by `scripts/mac/renew.sh` | This Mac |
+| A second Mac | The copy the first Mac leaves in iCloud Drive | Installed on its own each time it changes | Xcode there once, the same Apple ID |
 | Fire TV, Android | The APK over `adb` | For good | ADB debugging on the device |
 
 Built files land in `build/` (gitignored): `build/SuperFin.ipa` for SideStore or AltStore, and `build/SuperFin-FireTV.apk` for Fire TV. The Fire TV APK is a release build (the app's code is inside it, no dev server needed), signed with the debug key, with both the 32-bit and 64-bit ARM code.
@@ -70,6 +71,37 @@ The Mac app is the iPad app on Apple silicon ("Designed for iPad"). There is no 
 1. In Xcode, pick the destination **My Mac (Designed for iPad)**.
 2. The first time, Xcode needs a development profile for `com.kushagra.superfin` and the `downloadactivity` extension: under **Signing & Capabilities**, keep **Automatically manage signing** on with your team, and let it register this Mac when it asks. From the command line that's `-allowProvisioningUpdates` on the `xcodebuild` call. Without it the build stops at "No profiles for 'com.kushagra.superfin' were found".
 3. Press Run. SuperFin opens in its own window and stays in Launchpad.
+
+## Keeping the Macs signed
+
+A free Apple ID signs the Mac app for 7 days. `scripts/mac/renew.sh` rebuilds it with a fresh profile, installs it into `/Applications` and leaves a copy in iCloud Drive (`SuperFin/SuperFin.zip`) for a second Mac. Set it to run on its own, once, on the Mac that has this repo:
+
+```bash
+scripts/mac/install-renew-agent.sh
+```
+
+That adds a LaunchAgent that renews now and then every 3 days, or at the next wake if the Mac was asleep. Each run asks Apple for a profile on your account (`xcodebuild -allowProvisioningUpdates`), which is why you start it yourself. It builds whatever this checkout has, so keep it on `develop`; the log says which commit it built. Undo it with `--uninstall`.
+
+- **Log:** `~/Library/Logs/SuperFin/renew.log`, and the full build in `build.log` beside it.
+- **When it fails** you get a notification. The usual cause is Xcode wanting you to sign in again: open Xcode once, then run `scripts/mac/renew.sh` by hand.
+- **By hand without touching the account:** `scripts/mac/renew.sh --no-provision` uses the profile Xcode already has.
+
+## A second Mac
+
+Another Apple silicon Mac (a MacBook Air) can run the same build, but a free Apple ID signs only for Macs it knows, and only Xcode on that Mac can introduce it.
+
+1. On the second Mac, install Xcode and sign in with the **same Apple ID** (Settings → Accounts).
+2. Make any throwaway project (File → New → Project → iOS App), pick your Personal Team under Signing, choose **My Mac (Designed for iPad)** and press Run once. That registers this Mac; the project can go.
+3. On the main Mac, run `scripts/mac/renew.sh`. Its new profile covers both Macs.
+4. On the second Mac, once iCloud Drive has synced the `SuperFin` folder:
+
+   ```bash
+   bash ~/Library/Mobile\ Documents/com~apple~CloudDocs/SuperFin/install-air-agent.sh
+   ```
+
+   It installs SuperFin now, and again each time the main Mac publishes a new copy. Log: `~/Library/Logs/SuperFin/receive.log`. Undo it with `--uninstall`.
+
+Both Macs need to be signed in to iCloud with iCloud Drive on. A free Apple ID allows 3 sideloaded apps at a time and SuperFin counts as two (the app and its download Live Activity), so give SideStore on the iPhone a different Apple ID.
 
 ## Fire TV and Android
 

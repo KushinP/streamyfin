@@ -23,7 +23,7 @@ interface Props extends TouchableOpacityProps {
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
-const icons: Record<CollectionType, IconName> = {
+export const libraryIcons: Record<CollectionType, IconName> = {
   movies: "film",
   tvshows: "tv",
   music: "musical-notes",
@@ -38,21 +38,14 @@ const icons: Record<CollectionType, IconName> = {
   trailers: "videocam",
   unknown: "help-circle",
 } as const;
-export const LibraryItemCard: React.FC<Props> = ({ library, ...props }) => {
+/**
+ * A library's item count and the word for what it counts ("Movies",
+ * "Series"), shared by the list card and the wide-window tile.
+ */
+export const useLibraryStats = (library: BaseItemDto) => {
   const [api] = useAtom(apiAtom);
   const [user] = useAtom(userAtom);
-  const { settings } = useSettings();
-
   const { t } = useTranslation();
-
-  const url = useMemo(
-    () =>
-      getPrimaryImageUrl({
-        api,
-        item: library,
-      }),
-    [api, library],
-  );
 
   const itemType = useMemo(() => {
     let _itemType: BaseItemKind | undefined;
@@ -105,6 +98,24 @@ export const LibraryItemCard: React.FC<Props> = ({ library, ...props }) => {
     enabled: !!api,
   });
 
+  return { itemsCount, itemTypeName };
+};
+
+export const LibraryItemCard: React.FC<Props> = ({ library, ...props }) => {
+  const [api] = useAtom(apiAtom);
+  const { settings } = useSettings();
+
+  const url = useMemo(
+    () =>
+      getPrimaryImageUrl({
+        api,
+        item: library,
+      }),
+    [api, library],
+  );
+
+  const { itemsCount, itemTypeName } = useLibraryStats(library);
+
   if (!url) return null;
 
   if (settings?.libraryOptions?.display === "row") {
@@ -112,7 +123,7 @@ export const LibraryItemCard: React.FC<Props> = ({ library, ...props }) => {
       <TouchableItemRouter item={library} className='w-full px-4'>
         <View className='flex flex-row items-center w-full relative '>
           <Ionicons
-            name={icons[library.CollectionType!] || "folder"}
+            name={libraryIcons[library.CollectionType!] || "folder"}
             size={22}
             color={"#e5e5e5"}
           />

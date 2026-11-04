@@ -137,6 +137,19 @@ export const HomeAmbientColors = {
   scrim: "rgba(0, 0, 0, 0.45)",
 } as const;
 
+/** A library tile on the wide-window Library page. */
+export const LibraryTileColors = {
+  background: "#171717",
+  border: "rgba(255, 255, 255, 0.06)",
+  borderHovered: "rgba(255, 255, 255, 0.35)",
+  clear: "rgba(0, 0, 0, 0)",
+  scrim: "rgba(0, 0, 0, 0.85)",
+  text: "#ffffff",
+  subtext: "#d4d4d4",
+  placeholderIcon: "#525252",
+  badge: "rgba(0, 0, 0, 0.6)",
+} as const;
+
 /** The background of a page drawn under a parallax header (ParallaxPage). */
 export const ParallaxPageColors = {
   background: "black",

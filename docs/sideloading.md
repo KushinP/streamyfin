@@ -68,7 +68,8 @@ After 7 days the app stops opening; plug in and press Run again.
 The Mac app is the iPad app on Apple silicon ("Designed for iPad"). There is no DMG: the player library has no Mac Catalyst build (see `docs/mac.md`), and macOS installs iPad apps only from Xcode, the App Store or TestFlight.
 
 1. In Xcode, pick the destination **My Mac (Designed for iPad)**.
-2. Press Run. SuperFin opens in its own window and stays in Launchpad.
+2. The first time, Xcode needs a development profile for `com.kushagra.superfin` and the `downloadactivity` extension: under **Signing & Capabilities**, keep **Automatically manage signing** on with your team, and let it register this Mac when it asks. From the command line that's `-allowProvisioningUpdates` on the `xcodebuild` call. Without it the build stops at "No profiles for 'com.kushagra.superfin' were found".
+3. Press Run. SuperFin opens in its own window and stays in Launchpad.
 
 ## Fire TV and Android
 

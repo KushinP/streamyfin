@@ -741,8 +741,15 @@ final class PlayerViewModel: NSObject, ObservableObject {
 	/// (settings.enableDoubleTapToSeek). Same guards as the surface drag —
 	/// lock mode and end-of-playback overlays swallow the gesture.
 	func doubleTapSeek(forward: Bool) {
-		guard doubleTapToSeekEnabled, !controlsLocked, !showStillWatching,
-			errorMessage == nil, duration > 0
+		guard doubleTapToSeekEnabled else { return }
+		keyboardSeek(forward: forward)
+	}
+
+	/// An arrow key on an iPad or the Mac: the double-tap jump and its
+	/// feedback pill, whether or not double-tap seeking is turned on, since
+	/// that setting is about the gesture.
+	func keyboardSeek(forward: Bool) {
+		guard !controlsLocked, !showStillWatching, errorMessage == nil, duration > 0
 		else { return }
 		if forward {
 			seekForward()

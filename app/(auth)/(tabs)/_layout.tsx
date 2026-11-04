@@ -167,7 +167,7 @@ export default function TabLayout() {
         {macSidebar && <MacSidebar />}
         <View style={{ flex: 1 }}>
           <NativeTabs
-            sidebarAdaptable={usesNativeSidebar()}
+            sidebarAdaptable={usesNativeSidebar() && !macSidebar}
             tabBarHidden={macSidebar}
             tabBarStyle={{
               backgroundColor: "#121212",

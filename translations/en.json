@@ -1220,6 +1220,9 @@
     "title": "This screen doesn't exist.",
     "go_home": "Go to home screen!"
   },
+  "mac_sidebar": {
+    "libraries": "Libraries"
+  },
   "tabs": {
     "home": "Home",
     "search": "Search",

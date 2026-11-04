@@ -38,7 +38,7 @@ export const macSidebarItems = (
   ...(settings?.streamyStatsServerUrl && !settings.hideWatchlistsTab
     ? [tab("(watchlists)", "watchlists.title", "list")]
     : []),
-  tab("(libraries)", "tabs.library", "albums"),
+  tab("(libraries)", "tabs.library", "library"),
   ...(settings?.showCustomMenuLinks
     ? [tab("(custom-links)", "tabs.custom_links", "link")]
     : []),

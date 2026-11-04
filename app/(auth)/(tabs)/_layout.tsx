@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Platform, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import { AppKeyCommands } from "@/components/AppKeyCommands";
+import { MacWindowSize } from "@/components/MacWindowSize";
 import type { TVNavBarTab } from "@/components/tv/TVNavBar";
 import { TVNavBar } from "@/components/tv/TVNavBar";
 import { Colors } from "@/constants/Colors";
@@ -156,6 +157,7 @@ export default function TabLayout() {
       <SystemBars hidden={false} style='light' />
       {/* Keyboard shortcuts for iPad and the Mac; tvOS has its remote. */}
       {Platform.OS === "ios" && !Platform.isTV && <AppKeyCommands />}
+      {Platform.OS === "ios" && !Platform.isTV && <MacWindowSize />}
       <NativeTabs
         sidebarAdaptable={usesSidebar()}
         tabBarStyle={{

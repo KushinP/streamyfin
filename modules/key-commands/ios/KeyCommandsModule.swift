@@ -30,6 +30,17 @@ public class KeyCommandsModule: Module {
     Function("setCommands") { (commands: [KeyCommandRecord]) in
       DispatchQueue.main.async { KeyCommandHost.shared.install(commands) }
     }
+
+    // Lives here because this module already owns the app's window-level
+    // behaviour on the Mac; a module of its own for one call is not worth it.
+    Function("setMinimumWindowSize") { (width: Double, height: Double) in
+      DispatchQueue.main.async {
+        let size = CGSize(width: width, height: height)
+        for scene in UIApplication.shared.connectedScenes {
+          (scene as? UIWindowScene)?.sizeRestrictions?.minimumSize = size
+        }
+      }
+    }
   }
 }
 

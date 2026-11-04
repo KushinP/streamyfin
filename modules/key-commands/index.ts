@@ -14,6 +14,7 @@ export type KeyCommand = {
 
 type KeyCommandsNativeModule = {
   setCommands(commands: KeyCommand[]): void;
+  setMinimumWindowSize(width: number, height: number): void;
   addListener(
     event: "onKeyCommand",
     listener: (event: { id: string }) => void,
@@ -40,3 +41,7 @@ export const addKeyCommandListener = (
   listener: (id: string) => void,
 ): EventSubscription | null =>
   KeyCommands?.addListener("onKeyCommand", ({ id }) => listener(id)) ?? null;
+
+/** The smallest the app's windows may be resized to, in points. */
+export const setMinimumWindowSize = (width: number, height: number) =>
+  KeyCommands?.setMinimumWindowSize(width, height);

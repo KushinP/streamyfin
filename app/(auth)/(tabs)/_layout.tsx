@@ -25,6 +25,7 @@ import {
 } from "@/hooks/useTVBackHandler";
 import { useSettings } from "@/utils/atoms/settings";
 import { eventBus } from "@/utils/eventBus";
+import { usesSidebar } from "@/utils/platform";
 
 // Music components are not available on tvOS (TrackPlayer not supported)
 const MiniPlayerBar = Platform.isTV
@@ -156,7 +157,7 @@ export default function TabLayout() {
       {/* Keyboard shortcuts for iPad and the Mac; tvOS has its remote. */}
       {Platform.OS === "ios" && !Platform.isTV && <AppKeyCommands />}
       <NativeTabs
-        sidebarAdaptable={false}
+        sidebarAdaptable={usesSidebar()}
         tabBarStyle={{
           backgroundColor: "#121212",
         }}

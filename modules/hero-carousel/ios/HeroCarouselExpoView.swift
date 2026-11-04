@@ -87,6 +87,9 @@ class HeroCarouselExpoView: ExpoView {
 
   let onItemPress = EventDispatcher()
   let onFilterToggle = EventDispatcher()
+  let onActiveItemChange = EventDispatcher()
+  /// The item last reported, so a re-render on the same slide stays quiet.
+  private var lastActiveItemID: String?
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
@@ -102,6 +105,11 @@ class HeroCarouselExpoView: ExpoView {
       },
       onFilterToggle: { [weak self] key in
         self?.onFilterToggle(["key": key])
+      },
+      onActiveItemChange: { [weak self] itemId in
+        guard let self, itemId != self.lastActiveItemID else { return }
+        self.lastActiveItemID = itemId
+        self.onActiveItemChange(["id": itemId])
       }
     )
     let hostingController = UIHostingController(rootView: root)

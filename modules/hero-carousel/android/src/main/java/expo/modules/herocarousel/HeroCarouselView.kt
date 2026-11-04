@@ -40,6 +40,9 @@ class HeroCarouselExpoView(context: Context, appContext: AppContext) :
 
   private val onItemPress by EventDispatcher()
   private val onFilterToggle by EventDispatcher()
+  private val onActiveItemChange by EventDispatcher()
+  /** The item last reported, so a recomposition on the same page stays quiet. */
+  private var lastActiveItemId: String? = null
 
   private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
   private var downX = 0f
@@ -70,7 +73,13 @@ class HeroCarouselExpoView(context: Context, appContext: AppContext) :
       HeroCarouselRoot(
         payload = payload.value,
         onItemPress = { id -> onItemPress(mapOf("id" to id)) },
-        onFilterToggle = { key -> onFilterToggle(mapOf("key" to key)) }
+        onFilterToggle = { key -> onFilterToggle(mapOf("key" to key)) },
+        onActiveItemChange = { id ->
+          if (id != lastActiveItemId) {
+            lastActiveItemId = id
+            onActiveItemChange(mapOf("id" to id))
+          }
+        }
       )
     }
   }

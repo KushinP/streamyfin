@@ -132,6 +132,11 @@ export const LiveTvTabBarColors = {
   inactiveLabel: "rgba(255, 255, 255, 0.65)",
 } as const;
 
+/** The fade over the Home backdrop (HomeAmbientBackdrop), halfway down. */
+export const HomeAmbientColors = {
+  scrim: "rgba(0, 0, 0, 0.45)",
+} as const;
+
 /** The background of a page drawn under a parallax header (ParallaxPage). */
 export const ParallaxPageColors = {
   background: "black",

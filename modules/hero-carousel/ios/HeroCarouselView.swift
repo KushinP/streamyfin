@@ -10,6 +10,8 @@ struct HeroCarouselRootView: View {
   @ObservedObject var state: HeroCarouselState
   let onItemPress: (String) -> Void
   let onFilterToggle: (String) -> Void
+  /// The slide now showing, by item id; the JS side tints Home with it.
+  let onActiveItemChange: (String) -> Void
 
   var body: some View {
     #if os(iOS)
@@ -22,13 +24,15 @@ struct HeroCarouselRootView: View {
         PagedHeroCarousel(
           items: state.items,
           headers: state.imageHeaders,
-          onItemPress: onItemPress
+          onItemPress: onItemPress,
+          onActiveItemChange: onActiveItemChange
         )
       } else {
         LegacyHeroCarousel(
           items: state.items,
           headers: state.imageHeaders,
-          onItemPress: onItemPress
+          onItemPress: onItemPress,
+          onActiveItemChange: onActiveItemChange
         )
       }
     }
@@ -209,6 +213,7 @@ private struct PagedHeroCarousel: View {
   let items: [HeroItem]
   let headers: [String: String]
   let onItemPress: (String) -> Void
+  let onActiveItemChange: (String) -> Void
 
   @State private var scrolledID: String?
   /// The scroll starts at offset 0, which is the leading wrap clone, and
@@ -276,6 +281,11 @@ private struct PagedHeroCarousel: View {
             teleport(to: firstRealID)
           }
         }
+        // The binding moves as a swipe starts to settle, which is early
+        // enough for a backdrop to begin its crossfade with the card.
+        .onChange(of: activeItemID, initial: true) { _, id in
+          if let id { onActiveItemChange(id) }
+        }
         .onAppear {
           guard !hasSeededPosition else { return }
           // Next runloop tick: the scroll view has laid out by then, so the
@@ -294,6 +304,10 @@ private struct PagedHeroCarousel: View {
         }
       }
     }
+  }
+
+  private var activeItemID: String? {
+    items.indices.contains(activeIndex) ? items[activeIndex].id : nil
   }
 
   private var activeIndex: Int {
@@ -339,6 +353,7 @@ private struct LegacyHeroCarousel: View {
   let items: [HeroItem]
   let headers: [String: String]
   let onItemPress: (String) -> Void
+  let onActiveItemChange: (String) -> Void
 
   @State private var selection: Int
 
@@ -347,11 +362,13 @@ private struct LegacyHeroCarousel: View {
   init(
     items: [HeroItem],
     headers: [String: String],
-    onItemPress: @escaping (String) -> Void
+    onItemPress: @escaping (String) -> Void,
+    onActiveItemChange: @escaping (String) -> Void
   ) {
     self.items = items
     self.headers = headers
     self.onItemPress = onItemPress
+    self.onActiveItemChange = onActiveItemChange
     // Slide 0 is the leading wrap clone whenever there is more than one item.
     _selection = State(initialValue: items.count > 1 ? 1 : 0)
   }
@@ -373,6 +390,9 @@ private struct LegacyHeroCarousel: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .frame(height: max(proxy.size.height - dotsArea, 0))
+        .onAppear { reportActiveItem() }
+        .onChange(of: currentRealIndex) { _ in reportActiveItem() }
+        .onChange(of: items) { _ in reportActiveItem() }
         .onChange(of: selection) { _ in
           // Wait out the page animation before swapping a wrap clone for its
           // real twin, otherwise the teleport cuts the animation short.
@@ -412,6 +432,11 @@ private struct LegacyHeroCarousel: View {
   private var currentRealIndex: Int {
     guard slides.indices.contains(selection) else { return 0 }
     return slides[selection].realIndex
+  }
+
+  private func reportActiveItem() {
+    guard items.indices.contains(currentRealIndex) else { return }
+    onActiveItemChange(items[currentRealIndex].id)
   }
 
   /// Reads the live `selection` rather than a captured one: this runs after

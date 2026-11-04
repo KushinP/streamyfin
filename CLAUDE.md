@@ -57,6 +57,7 @@ Navigation:
 - `expo-router-top-tabs-runtime-peers` | js-top-tabs requires react-native-tab-view (+ pager-view) at runtime; no import shows it, removing them crashes on launch
 - `ios27-sdk-tab-bar-items-display-order` | linked against the iOS 27 SDK, UITabBar.items is in display order (search last) and the detached button is TabRole.prominent; patched in react-native-bottom-tabs
 - `swiftui-foreach-evicts-hidden-tabs` | SwiftUI evicts a ForEach element no tab retains, and a tvOS focus selection past it rebuilds it outside an update and traps (REACT-NATIVE-24); hidden tabs stay out of the ForEach, patched in react-native-bottom-tabs
+- `sidebar-adaptable-breaks-in-a-mac-window` | Apple's sidebar-adaptable tab view skips its layout after the toggle in a Mac window; the Mac draws MacSidebar and hides the tab bar, the iPad keeps the native one
 - `foreign-link-lands-on-library-route` | the library route is /[libraryId], so an unknown one-word link opens it with that word as the id; the music notification's trackplayer://notification.click did, and app/+native-intent.ts drops it
 
 UI and headers:
@@ -104,6 +105,7 @@ TV platform:
 Build and tooling:
 - `eas-archive-drops-gitignored-tracked-files` | EAS uploads skip anything matching .gitignore even if tracked; re-include required assets, keep asset require() at module scope
 - `bun-test-discovery-leaks-fds` | bare `bun test` leaves ~14k fds open; child processes spawned from tests get dead stdio, so do the work in-process
+- `metro-ci-mode-does-not-watch` | `CI=1 expo start` turns file watching off, so edits never reach the app; start Metro without it
 - `require-hooks-leak-across-jest-specs` | a require hook (tsx/cjs) registered from a spec stays on the Jest worker's Node loader and breaks later specs; map it to a stub
 
 ## Project overview
@@ -271,7 +273,7 @@ PersistQueryClientProvider
 
 **Native modules** in `modules/`: `mpv-player` (the native player, iOS and Android),
 `exoplayer-player`, `background-downloader`, `glass-poster`, `hero-carousel`,
-`key-commands` (keyboard shortcuts on iPad and the Mac),
+`key-commands` (keyboard shortcuts on iPad and the Mac, and the Mac window's minimum size),
 `notification-settings-link` (the iOS Settings link to the Notifications screen),
 `system-volume`, `top-shelf-cache`, `tv-recommendations`, `tv-search`, `tv-user-profile`,
 `wifi-ssid`.

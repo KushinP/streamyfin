@@ -96,6 +96,27 @@ describe("useMultiviewTileStream", () => {
     }
   });
 
+  test("a paused or finished tile reports itself paused", async () => {
+    // Reported in review: progress always said playing, so the dashboard
+    // showed a stopped tile as watching.
+    mockGetStreamUrl.mockResolvedValue(liveStream);
+    jest.useFakeTimers();
+    try {
+      const { result } = await renderHook(() =>
+        useMultiviewTileStream("chan-1"),
+      );
+      await waitFor(() => expect(result.current.state.status).toBe("ready"));
+      await act(async () => result.current.onPaused(true));
+      await act(async () => jest.advanceTimersByTime(PROGRESS_REPORT_INTERVAL));
+      const [args] = mockProgress.mock.calls[0] as [
+        { playbackProgressInfo: { IsPaused?: boolean } },
+      ];
+      expect(args.playbackProgressInfo.IsPaused).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test("asks for the user's default bitrate, as the full player does", async () => {
     mockSettings = {
       audioTranscodeMode: "auto",

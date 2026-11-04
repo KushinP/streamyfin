@@ -86,9 +86,16 @@ class MPVNowPlayingManager {
         print("[NowPlaying] Remote commands ready")
     }
     
+    /// Posted on main once the owning engine has let the remote commands go,
+    /// so another engine still playing (a multiview tile) can take them over.
+    static let releasedNotification = Notification.Name("MPVNowPlayingReleased")
+
     func cleanupRemoteCommands(owner engine: AnyObject) {
         guard isCommandsSetup, owner == ObjectIdentifier(engine) else { return }
         owner = nil
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: Self.releasedNotification, object: nil)
+        }
         
         let cc = MPRemoteCommandCenter.shared()
         cc.playCommand.removeTarget(nil)

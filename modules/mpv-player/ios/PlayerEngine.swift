@@ -103,6 +103,10 @@ final class MPVPlayerEngine: NSObject {
 			self, selector: #selector(handleAudioSessionInterruption),
 			name: AVAudioSession.interruptionNotification, object: nil)
 
+		NotificationCenter.default.addObserver(
+			self, selector: #selector(handleNowPlayingReleased),
+			name: MPVNowPlayingManager.releasedNotification, object: nil)
+
 		#if os(iOS)
 		NotificationCenter.default.addObserver(
 			self, selector: #selector(handleDidBecomeActive),
@@ -190,6 +194,15 @@ final class MPVPlayerEngine: NSObject {
 		@unknown default:
 			break
 		}
+	}
+
+	/// Another engine gave the lock screen up (a multiview tile closed). One
+	/// still holding a file takes it over, so the controls keep working; the
+	/// first to get here wins, the rest stay quiet behind `speaks(for:)`.
+	@objc private func handleNowPlayingReleased() {
+		guard !isShutDown, cachedDuration > 0 else { return }
+		setupRemoteCommands()
+		syncNowPlaying(isPlaying: intendedPlayState)
 	}
 
 	private func setupRemoteCommands() {
@@ -340,6 +353,10 @@ final class MPVPlayerEngine: NSObject {
 	 */
 	func destroy() {
 		loadGeneration &+= 1
+		// A destroyed player plays nothing, so it gives the lock screen up now,
+		// not at a deferred deinit: an engine kept alive (a cached screen's
+		// preview) would otherwise hold it while the next player is ignored.
+		clearNowPlayingInfo()
 		// Release the system's single inline auto-PiP slot now; deinit is deferred
 		// and would otherwise keep it claimed, blocking PiP for the next video.
 		setPictureInPictureAutoStartEnabled(false)

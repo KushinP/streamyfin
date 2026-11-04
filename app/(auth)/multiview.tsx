@@ -32,9 +32,9 @@ import {
   emptyMultiview,
   isTileMuted,
   type MultiviewState,
+  playNext,
   promoteTile,
   removeTile,
-  replaceTile,
   tapWhileToolbar,
   tileFrames,
   toggleAllAudio,
@@ -196,7 +196,7 @@ function MultiviewScreen() {
               onLongPress={() => onTileLongPress(tile.key)}
               onInteract={onTileInteract}
               onPlayNext={(itemId) =>
-                setState((s) => replaceTile(s, tile.key, itemId))
+                setState((s) => playNext(s, tile.key, itemId))
               }
               onRemove={() => setState((s) => removeTile(s, tile.key))}
             />

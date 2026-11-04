@@ -4,6 +4,7 @@ import {
   emptyMultiview,
   isTileMuted,
   type MultiviewState,
+  playNext,
   promoteTile,
   removeTile,
   replaceTile,
@@ -122,6 +123,22 @@ describe("replaceTile", () => {
   test("changes nothing for a tile that is not there", () => {
     const state = withTiles("a");
     expect(replaceTile(state, "missing", "c")).toBe(state);
+  });
+});
+
+describe("playNext", () => {
+  test("plays the next item in the finished tile's place", () => {
+    const state = playNext(withTiles("a", "b"), "k-b", "c");
+    expect(state.tiles.map((t) => t.itemId)).toEqual(["a", "c"]);
+  });
+
+  test("when the next item is already up, closes the finished tile and hears that one", () => {
+    // Reported in review: Play next did nothing when the next episode was
+    // already in another tile.
+    const heard = selectAudio(withTiles("a", "b"), "k-b");
+    const state = playNext(heard, "k-b", "a");
+    expect(state.tiles.map((t) => t.itemId)).toEqual(["a"]);
+    expect(state.audio).toBe("k-a");
   });
 });
 

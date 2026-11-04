@@ -95,6 +95,22 @@ export const replaceTile = (
   };
 };
 
+/**
+ * What "Play next" does in a finished tile. Normally the next item takes the
+ * tile's place. When it is already up in another tile, the finished tile goes
+ * and the sound moves to that one, rather than the press doing nothing.
+ */
+export const playNext = (
+  state: MultiviewState,
+  key: string,
+  itemId: string,
+): MultiviewState => {
+  const existing = state.tiles.find((t) => t.itemId === itemId);
+  if (!existing) return replaceTile(state, key, itemId);
+  const removed = removeTile(state, key);
+  return removed.audio === "all" ? removed : selectAudio(removed, existing.key);
+};
+
 /** Makes a tile the only one heard. */
 export const selectAudio = (
   state: MultiviewState,

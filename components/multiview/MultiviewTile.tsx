@@ -74,7 +74,7 @@ export function MultiviewTile({
     playerRef.current = player;
     if (player) lastPlayer.current = player;
   }, []);
-  const { state, onPosition } = useMultiviewTileStream(itemId);
+  const { state, onPosition, onPaused } = useMultiviewTileStream(itemId);
   // Read when the source is built and from onLoad: a mute that arrives over
   // the bridge after an autoplaying file has started is heard for a moment.
   const mutedRef = useRef(muted);
@@ -89,12 +89,18 @@ export function MultiviewTile({
   const isChannel = state.status === "ready" && state.item.Type === "TvChannel";
   // The stream URL arrives well before the first frame of a live channel, so
   // the spinner stays until playback is seen to move, not until the URL.
-  const playbackStarted = useRef(createPlaybackStartWatch()).current;
+  // One watch per stream: a stream reopened in place (a server URL or bitrate
+  // change) starts from its first frame again.
+  const playbackStarted = useMemo(() => createPlaybackStartWatch(), [source]);
   const [playing, setPlaying] = useState(false);
   const [paused, setPaused] = useState(false);
   const [seeking, setSeeking] = useState(false);
+  // A new stream object means a reload: wait for its first frame again.
+  useEffect(() => setPlaying(false), [source]);
   const [stalled, setStalled] = useState(false);
   const [ended, setEnded] = useState(false);
+  // The server hears a finished tile as paused, as it hears a paused one.
+  useEffect(() => onPaused(paused || ended), [paused, ended, onPaused]);
   const lastPosition = useRef<number | null>(null);
   const duration = useRef(0);
   const lastMoveAt = useRef(Date.now());

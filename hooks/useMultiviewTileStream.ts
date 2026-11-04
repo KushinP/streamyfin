@@ -49,6 +49,9 @@ export const useMultiviewTileStream = (itemId: string) => {
   const [state, setState] = useState<TileStreamState>({ status: "loading" });
   // Seconds; the stop report saves it as the resume point of a library item.
   const positionRef = useRef(0);
+  // Paused by the user or held on the last frame; the progress reports say
+  // so, or the dashboard shows a stopped tile as watching.
+  const pausedRef = useRef(false);
 
   useEffect(() => {
     if (!api || !user?.Id) return;
@@ -71,6 +74,7 @@ export const useMultiviewTileStream = (itemId: string) => {
             PlaySessionId: session.stream.sessionId ?? undefined,
             LiveStreamId: session.stream.mediaSource?.LiveStreamId ?? undefined,
             PositionTicks: secondsToTicks(positionRef.current),
+            IsPaused: pausedRef.current,
           },
         })
         .catch((error) =>
@@ -191,5 +195,9 @@ export const useMultiviewTileStream = (itemId: string) => {
     positionRef.current = seconds;
   }, []);
 
-  return { state, onPosition };
+  const onPaused = useCallback((paused: boolean) => {
+    pausedRef.current = paused;
+  }, []);
+
+  return { state, onPosition, onPaused };
 };

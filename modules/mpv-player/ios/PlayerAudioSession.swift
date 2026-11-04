@@ -35,8 +35,12 @@ final class PlayerAudioSession {
 	/// `completion` runs on the main thread afterwards, whether or not the
 	/// session took it.
 	func activate(owner: AnyObject, completion: (() -> Void)? = nil) {
+		// Only the identifier crosses to the queue: capturing the engine would
+		// let its last reference, and so its deinit and teardown, land here,
+		// off the main thread.
+		let id = ObjectIdentifier(owner)
 		queue.async {
-			self.holders.take(ObjectIdentifier(owner))
+			self.holders.take(id)
 			let session = AVAudioSession.sharedInstance()
 			do {
 				try session.setCategory(.playback, mode: .moviePlayback, policy: .longFormAudio, options: [])

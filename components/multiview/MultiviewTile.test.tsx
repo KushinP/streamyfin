@@ -89,6 +89,7 @@ jest.mock("@/hooks/useMultiviewTileStream", () => ({
           mediaSource: mockMediaSource,
         },
         onPosition: jest.fn(),
+        onPaused: jest.fn(),
       } as typeof mockStream;
     }
     return mockStream;

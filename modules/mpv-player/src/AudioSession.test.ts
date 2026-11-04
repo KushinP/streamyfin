@@ -89,8 +89,11 @@ describe("iOS audio session", () => {
 
     const activate = section(sessionSource, "\tfunc activate(", "\n\t}\n");
 
-    // Straight onto the queue, with no way out before the session calls.
-    expect(activate).toMatch(/^[^\n]*\{\s*queue\.async \{/);
+    // Straight onto the queue, with no way out before the session calls. The
+    // holder's identifier is taken first so the engine itself never crosses.
+    expect(activate).toMatch(
+      /^[^\n]*\{\s*let id = ObjectIdentifier\(owner\)\s*queue\.async \{/,
+    );
     expect(activate).not.toMatch(/\b(guard|return)\b/);
     expect(activate).toMatch(
       /try session\.setCategory\([\s\S]*?try session\.setActive\(true\)/,

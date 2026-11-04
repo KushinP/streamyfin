@@ -16,7 +16,8 @@ on:
 
 jobs:
   comment-artifacts:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request')
+    # Upstream only: needs streamyfin/streamyfin's secrets or acts on its tracker.
+    if: github.repository == 'streamyfin/streamyfin' && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request'))
     name: 📦 Post Build Artifacts
     runs-on: ubuntu-26.04
     permissions:

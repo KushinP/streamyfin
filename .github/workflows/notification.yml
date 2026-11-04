@@ -13,7 +13,8 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-26.04
-    if: github.event_name == 'pull_request'
+    # Upstream only: needs streamyfin/streamyfin's secrets or acts on its tracker.
+    if: github.repository == 'streamyfin/streamyfin' && (github.event_name == 'pull_request')
     steps:
       - name: 🛎️ Notify Discord
         uses: Ilshidur/action-discord@d2594079a10f1d6739ee50a2471f0ca57418b554 # 0.4.0
@@ -30,7 +31,8 @@ jobs:
 
   notify-on-failure:
     runs-on: ubuntu-26.04
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    # Upstream only: needs streamyfin/streamyfin's secrets or acts on its tracker.
+    if: github.repository == 'streamyfin/streamyfin' && (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure')
     steps:
       - name: 🚨 Notify Discord on Failure
         uses: Ilshidur/action-discord@d2594079a10f1d6739ee50a2471f0ca57418b554 # 0.4.0

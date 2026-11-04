@@ -1,0 +1,189 @@
+name: 🔀 Upstream Sync
+
+# Fork only: keeps KushinP/streamyfin in step with streamyfin/streamyfin by
+# opening (or refreshing) one PR from sync/upstream into develop. The fork has
+# diverged in app.json, the assets, the translations and the Live TV files, so
+# nothing lands on develop without a review. See docs/conventions/upstream-sync.md.
+
+on:
+  schedule:
+    - cron: "17 5 * * *" # Daily 05:17 UTC, off the hour to dodge the cron rush
+  workflow_dispatch:
+
+# Fixed group so the cron and a manual run cannot race on the same branch.
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  UPSTREAM_REPO: streamyfin/streamyfin
+  UPSTREAM_BRANCH: develop
+  BASE_BRANCH: develop
+  SYNC_BRANCH: sync/upstream
+  PR_TITLE: "chore(sync): merge upstream Streamyfin"
+  CONFLICT_LABEL: needs-merge
+
+jobs:
+  sync:
+    name: 🔀 Merge upstream develop
+    # Upstream has nothing to sync from; only the fork runs this.
+    if: github.repository != 'streamyfin/streamyfin'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.BASE_BRANCH }}
+          fetch-depth: 0
+          # GITHUB_TOKEN cannot push commits that touch .github/workflows, and
+          # PRs it opens do not start CI. A PAT in UPSTREAM_SYNC_TOKEN (contents,
+          # pull requests and workflows: write) lifts both; without it the
+          # default token still works for upstream changes outside workflows.
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+
+      - name: 🔍 Compare with upstream
+        id: compare
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch --no-tags upstream "${UPSTREAM_BRANCH}"
+          git fetch --no-tags origin "${SYNC_BRANCH}" || true
+
+          upstream_sha="$(git rev-parse "upstream/${UPSTREAM_BRANCH}")"
+          echo "upstream_sha=${upstream_sha}" >> "$GITHUB_OUTPUT"
+
+          if git merge-base --is-ancestor "${upstream_sha}" "origin/${BASE_BRANCH}"; then
+            echo "Upstream ${upstream_sha} is already in ${BASE_BRANCH}; nothing to sync."
+            echo "action=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A sync branch that already holds this upstream tip may carry a
+          # hand resolved conflict; pushing over it would throw that work away.
+          if git rev-parse --verify --quiet "origin/${SYNC_BRANCH}" >/dev/null \
+            && git merge-base --is-ancestor "${upstream_sha}" "origin/${SYNC_BRANCH}"; then
+            echo "${SYNC_BRANCH} already contains upstream ${upstream_sha}; leaving it alone."
+            echo "action=keep" >> "$GITHUB_OUTPUT"
+          else
+            echo "action=merge" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo "commits<<EOF_COMMITS"
+            git log --no-merges --format='- %s (%h)' "origin/${BASE_BRANCH}..${upstream_sha}" | head -n 100
+            echo "EOF_COMMITS"
+            echo "count=$(git rev-list --count --no-merges "origin/${BASE_BRANCH}..${upstream_sha}")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 🔀 Merge into the sync branch
+        id: merge
+        if: steps.compare.outputs.action == 'merge'
+        env:
+          UPSTREAM_SHA: ${{ steps.compare.outputs.upstream_sha }}
+        run: |
+          git switch -C "${SYNC_BRANCH}" "origin/${BASE_BRANCH}"
+
+          if git merge --no-ff --no-edit \
+            -m "chore(sync): merge upstream ${UPSTREAM_REPO}@${UPSTREAM_SHA:0:8}" \
+            "${UPSTREAM_SHA}"; then
+            echo "conflicted=false" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "files<<EOF_FILES"
+              git diff --name-only --diff-filter=U | sed 's/^/- `/; s/$/`/'
+              echo "EOF_FILES"
+            } >> "$GITHUB_OUTPUT"
+            echo "conflicted=true" >> "$GITHUB_OUTPUT"
+            # Commit nothing broken: the PR carries upstream's tip as is, and
+            # GitHub shows the same conflicts for a person to resolve.
+            git merge --abort
+            git switch -C "${SYNC_BRANCH}" "${UPSTREAM_SHA}"
+          fi
+
+          if ! git push --force origin "HEAD:refs/heads/${SYNC_BRANCH}"; then
+            echo "::error::Push to ${SYNC_BRANCH} was refused. If upstream changed .github/workflows, GITHUB_TOKEN cannot push it: add an UPSTREAM_SYNC_TOKEN secret with the workflows permission."
+            exit 1
+          fi
+
+      - name: 📬 Open or update the PR
+        if: steps.compare.outputs.action != 'skip'
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+          ACTION: ${{ steps.compare.outputs.action }}
+          UPSTREAM_SHA: ${{ steps.compare.outputs.upstream_sha }}
+          COUNT: ${{ steps.compare.outputs.count }}
+          COMMITS: ${{ steps.compare.outputs.commits }}
+          CONFLICTED: ${{ steps.merge.outputs.conflicted }}
+          CONFLICT_FILES: ${{ steps.merge.outputs.files }}
+        run: |
+          existing="$(gh pr list --head "${SYNC_BRANCH}" --base "${BASE_BRANCH}" --state open --json number --jq '.[0].number // empty')"
+
+          # A kept branch was not rebuilt this run, so its conflict state is
+          # whatever the open PR already says; leave the body and label alone.
+          if [ "${ACTION}" = "keep" ]; then
+            if [ -n "${existing}" ]; then
+              echo "PR #${existing} is already up to date with upstream ${UPSTREAM_SHA}."
+              exit 0
+            fi
+            # No PR to read it from: a branch that lacks develop is a conflict
+            # branch left by an earlier run whose PR was closed.
+            if git merge-base --is-ancestor "origin/${BASE_BRANCH}" "origin/${SYNC_BRANCH}"; then
+              CONFLICTED=false
+            else
+              CONFLICTED=true
+              CONFLICT_FILES="- Run \`git merge origin/${SYNC_BRANCH}\` on \`${BASE_BRANCH}\` locally to list them."
+            fi
+          fi
+
+          body_file="$(mktemp)"
+          {
+            echo "Brings in ${COUNT} upstream commit(s) from [${UPSTREAM_REPO}@\`${UPSTREAM_SHA:0:8}\`](https://github.com/${UPSTREAM_REPO}/commit/${UPSTREAM_SHA})."
+            echo
+            if [ "${CONFLICTED}" = "true" ]; then
+              echo "## ⚠️ Merge conflicts"
+              echo
+              echo "The merge into \`${BASE_BRANCH}\` conflicts, so this branch is upstream's tip as is and nothing broken was committed. Resolve these, either in the GitHub conflict editor or locally (steps in \`docs/conventions/upstream-sync.md\`):"
+              echo
+              echo "${CONFLICT_FILES}"
+              echo
+            fi
+            echo "## Upstream commits"
+            echo
+            echo "${COMMITS}"
+            if [ "${COUNT}" -gt 100 ]; then
+              echo "- …and $((COUNT - 100)) more"
+            fi
+            echo
+            echo "## Before merging"
+            echo
+            echo "- [ ] Fork only files kept their SuperFin values (\`app.json\`, \`app.config.ts\`, icons and splash in \`assets/images\`, the brand colors, Live TV, multiview)"
+            echo "- [ ] CI is green"
+            echo "- [ ] Merge with a **merge commit**, not squash, so the next sync starts from upstream's history"
+            echo
+            echo "_Opened by the 🔀 Upstream Sync workflow._"
+          } > "${body_file}"
+
+          gh label create "${CONFLICT_LABEL}" --color B60205 \
+            --description "Upstream sync PR with merge conflicts to resolve" --force
+
+          if [ -n "${existing}" ]; then
+            gh pr edit "${existing}" --title "${PR_TITLE}" --body-file "${body_file}"
+            pr="${existing}"
+          else
+            pr="$(gh pr create --head "${SYNC_BRANCH}" --base "${BASE_BRANCH}" \
+              --title "${PR_TITLE}" --body-file "${body_file}")"
+          fi
+
+          if [ "${CONFLICTED}" = "true" ]; then
+            gh pr edit "${pr}" --add-label "${CONFLICT_LABEL}"
+          else
+            gh pr edit "${pr}" --remove-label "${CONFLICT_LABEL}" || true
+          fi

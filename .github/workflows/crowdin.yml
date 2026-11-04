@@ -19,6 +19,8 @@ permissions:
 
 jobs:
   sync-translations:
+    # Upstream only: needs streamyfin/streamyfin's secrets or acts on its tracker.
+    if: github.repository == 'streamyfin/streamyfin'
     runs-on: ubuntu-26.04
 
     steps:

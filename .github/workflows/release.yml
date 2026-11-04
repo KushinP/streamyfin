@@ -28,6 +28,8 @@ on:
 
 jobs:
   build:
+    # Upstream only: needs streamyfin/streamyfin's secrets or acts on its tracker.
+    if: github.repository == 'streamyfin/streamyfin'
     name: 🚀 ${{ matrix.name }}
     runs-on: ubuntu-26.04
     # Per-target approval gate: each matrix job waits on its own environment,
@@ -184,7 +186,8 @@ jobs:
   github-release:
     name: 📦 Draft GitHub Release
     needs: build
-    if: ${{ !cancelled() }}
+    # Upstream only: needs streamyfin/streamyfin's secrets or acts on its tracker.
+    if: github.repository == 'streamyfin/streamyfin' && (!cancelled())
     runs-on: ubuntu-26.04
     permissions:
       contents: write

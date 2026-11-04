@@ -15,6 +15,8 @@ permissions:
 
 jobs:
   refresh:
+    # Upstream only: the regenerated types reach the fork through the upstream sync.
+    if: github.repository == 'streamyfin/streamyfin'
     name: 📐 Regenerate from the latest release
     runs-on: ubuntu-26.04
     permissions:

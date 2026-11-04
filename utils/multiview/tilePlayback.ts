@@ -7,8 +7,11 @@ import { MULTIVIEW_END_TOLERANCE } from "@/constants/Multiview";
  * progress ticks stopped. A stream with no duration, a live channel among
  * them, never ends.
  */
-export const isAtEnd = (position: number, duration: number): boolean =>
-  duration > 0 && duration - position <= MULTIVIEW_END_TOLERANCE;
+export const isAtEnd = (
+  position: number,
+  duration: number,
+  tolerance: number = MULTIVIEW_END_TOLERANCE,
+): boolean => duration > 0 && duration - position <= tolerance;
 
 /**
  * The episode after this one, from the list `getEpisodes({ adjacentTo })`

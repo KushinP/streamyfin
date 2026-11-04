@@ -10,6 +10,7 @@ import { ItemImage } from "@/components/common/ItemImage";
 import { Text } from "@/components/common/Text";
 import useRouter from "@/hooks/useAppRouter";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
+import { isMultiviewAvailable } from "@/utils/multiview/availability";
 
 export default function LiveTvChannelsPage() {
   const [api] = useAtom(apiAtom);
@@ -39,9 +40,9 @@ export default function LiveTvChannelsPage() {
       <FlashList
         data={channels?.Items}
         ListHeaderComponent={
-          // Multiview renders several MPV players at once; the TV builds
-          // have their own Live TV pages and no multiview yet.
-          Platform.isTV ? null : (
+          // Multiview renders several MPV players at once, which only the iOS
+          // player allows; see isMultiviewAvailable.
+          !isMultiviewAvailable(Platform) ? null : (
             <Pressable
               onPress={() => router.push("/multiview")}
               accessibilityRole='button'

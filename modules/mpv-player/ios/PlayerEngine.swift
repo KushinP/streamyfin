@@ -159,7 +159,7 @@ final class MPVPlayerEngine: NSObject {
 	/// would take the session back with no player left to give it up.
 	private func activateAudioSession(completion: (() -> Void)? = nil) {
 		guard !isShutDown else { return }
-		audioSession.activate(completion: completion)
+		audioSession.activate(owner: self, completion: completion)
 	}
 
 	@objc private func handleAudioSessionInterruption(_ notification: Notification) {
@@ -194,6 +194,7 @@ final class MPVPlayerEngine: NSObject {
 
 	private func setupRemoteCommands() {
 		nowPlayingManager.setupRemoteCommands(
+			owner: self,
 			playHandler: { [weak self] in self?.requestPlaying(true) },
 			pauseHandler: { [weak self] in self?.requestPlaying(false) },
 			toggleHandler: { [weak self] in
@@ -210,6 +211,7 @@ final class MPVPlayerEngine: NSObject {
 
 	func setNowPlayingMetadata(_ metadata: [String: String], artworkHeaders: [String: String]? = nil) {
 		print("[MPV] setNowPlayingMetadata: \(metadata["title"] ?? "nil")")
+		guard nowPlayingManager.speaks(for: self) else { return }
 		nowPlayingManager.setMetadata(
 			title: metadata["title"],
 			artist: metadata["artist"],
@@ -219,13 +221,19 @@ final class MPVPlayerEngine: NSObject {
 		)
 	}
 
+	/// Only the engine that owns Now Playing (or any, when none does) clears
+	/// it: in multiview a closing tile must not blank the lock screen and
+	/// remote commands for the tile that set them up.
 	private func clearNowPlayingInfo() {
-		nowPlayingManager.cleanupRemoteCommands()
+		guard nowPlayingManager.speaks(for: self) else { return }
+		nowPlayingManager.cleanupRemoteCommands(owner: self)
 		nowPlayingManager.clear()
 	}
 
-	/// Single location for Now Playing updates
+	/// Single location for Now Playing updates. Another engine's tile does not
+	/// write over the owner's position.
 	private func syncNowPlaying(isPlaying: Bool) {
+		guard nowPlayingManager.speaks(for: self) else { return }
 		print("[MPV] syncNowPlaying: pos=\(Int(cachedPosition))s, dur=\(Int(cachedDuration))s, playing=\(isPlaying)")
 		nowPlayingManager.updatePlayback(position: cachedPosition, duration: cachedDuration, isPlaying: isPlaying)
 	}
@@ -386,7 +394,7 @@ final class MPVPlayerEngine: NSObject {
 		renderer?.stop()
 		displayLayer.removeFromSuperlayer()
 		clearNowPlayingInfo()
-		audioSession.tearDown()
+		audioSession.tearDown(owner: self)
 		NotificationCenter.default.removeObserver(self)
 	}
 

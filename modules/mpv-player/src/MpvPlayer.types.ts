@@ -62,6 +62,11 @@ export type VideoSource = {
   autoplay?: boolean;
   /** Whether to loop the video indefinitely */
   loop?: boolean;
+  /**
+   * Start muted (iOS). Applied before the file loads, so an autoplaying
+   * source makes no sound until it is unmuted.
+   */
+  muted?: boolean;
   /** MPV subtitle track ID to select on start (1-based, -1 to disable) */
   initialSubtitleId?: number;
   /** MPV audio track ID to select on start (1-based) */

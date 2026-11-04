@@ -6,6 +6,7 @@ let mockOnProgress:
   | Handler<{ position: number; duration?: number }>
   | undefined;
 const mockGetEpisodes = jest.fn();
+let mockSources: ({ muted?: boolean } | undefined)[] = [];
 let mockOnState:
   | Handler<{ isPaused?: boolean; isLoading?: boolean }>
   | undefined;
@@ -74,16 +75,24 @@ const mockMediaSource = {
     },
   ],
 };
+// The real hook keeps its state between renders; so does this stand-in, per
+// item, so that object identity in the tile is tested and not the mock's.
+let mockStream: { state: { item: unknown } } | undefined;
 jest.mock("@/hooks/useMultiviewTileStream", () => ({
-  useMultiviewTileStream: () => ({
-    state: {
-      status: "ready",
-      item: mockItem,
-      source: { url: "https://jf.example.com/stream" },
-      mediaSource: mockMediaSource,
-    },
-    onPosition: jest.fn(),
-  }),
+  useMultiviewTileStream: () => {
+    if (mockStream?.state.item !== mockItem) {
+      mockStream = {
+        state: {
+          status: "ready",
+          item: mockItem,
+          source: { url: "https://jf.example.com/stream" },
+          mediaSource: mockMediaSource,
+        },
+        onPosition: jest.fn(),
+      } as typeof mockStream;
+    }
+    return mockStream;
+  },
 }));
 jest.mock("jotai", () => ({
   ...jest.requireActual("jotai"),
@@ -103,12 +112,14 @@ jest.mock("@/modules", () => {
     MpvPlayerView: forwardRef(
       (
         props: {
+          source?: { muted?: boolean };
           onProgress?: Handler<{ position: number }>;
           onPlaybackStateChange?: Handler<{ isPaused?: boolean }>;
         },
         ref: unknown,
       ) => {
         useImperativeHandle(ref, () => mockPlayer);
+        mockSources.push(props.source);
         mockOnProgress = props.onProgress;
         mockOnState = props.onPlaybackStateChange;
         return <View />;
@@ -156,6 +167,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockOnProgress = undefined;
   mockOnState = undefined;
+  mockSources = [];
+  mockStream = undefined;
   mockItem = {
     Id: "ep-5",
     Name: "Episode 5",
@@ -170,6 +183,30 @@ beforeEach(() => {
         { Id: "ep-6", Name: "Episode 6" },
       ],
     },
+  });
+});
+
+describe("the player", () => {
+  test("starts muted, before any sound can play", async () => {
+    // Reported in review: the mute went out from onLoad, after an autoplaying
+    // file could already be heard for a moment.
+    await renderTile();
+    expect(mockSources[0]?.muted).toBe(true);
+  });
+
+  test("keeps one source object across renders, so the stream never reloads", async () => {
+    await renderTile();
+    await tick(0);
+    await tick(1);
+    expect(new Set(mockSources).size).toBe(1);
+  });
+
+  test("is destroyed when the tile goes, freeing its decoder at once", async () => {
+    // Reported in review: React clears an object ref before effect cleanups
+    // run, so the cleanup found no player and never destroyed it.
+    const { unmount } = await renderTile();
+    await act(async () => unmount());
+    expect(mockPlayer.destroy).toHaveBeenCalled();
   });
 });
 
@@ -206,9 +243,29 @@ describe("when the item finishes", () => {
   test("pausing itself on the last frame counts as finished", async () => {
     await renderTile();
     await tick(1290, DURATION);
-    await tick(1301, DURATION);
+    await tick(1301.5, DURATION);
     await playerState({ isPaused: true });
     expect(finished()).toBeTruthy();
+  });
+
+  test("pausing a few seconds before the end is just a pause", async () => {
+    await renderTile();
+    await tick(1290, DURATION);
+    await tick(1299.5, DURATION);
+    await playerState({ isPaused: true });
+    expect(finished()).toBeNull();
+  });
+
+  test("a live channel that stops is a stall, never finished", async () => {
+    // A live stream can report a duration that grows with the live edge,
+    // which would otherwise read as having played to the end.
+    mockItem = { Id: "chan-1", Name: "WBZ-DT", Type: "TvChannel" };
+    await renderTile();
+    await tick(0, 60);
+    await tick(59.5, 60);
+    await act(async () => jest.advanceTimersByTime(3_000));
+    expect(finished()).toBeNull();
+    expect(starting()).toBeTruthy();
   });
 
   test("offers the next episode, which plays in this tile", async () => {

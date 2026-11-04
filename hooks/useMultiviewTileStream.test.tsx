@@ -18,13 +18,16 @@ jest.mock("jotai", () => ({
   ...jest.requireActual("jotai"),
   useAtomValue: (atom: unknown) => (atom === "apiAtom" ? mockApi : mockUser),
 }));
+const mockProgress = jest.fn((_args: unknown) => Promise.resolve());
+let mockSettings: Record<string, unknown> = { audioTranscodeMode: "auto" };
 jest.mock("@/utils/atoms/settings", () => ({
-  useSettings: () => ({ settings: { audioTranscodeMode: "auto" } }),
+  useSettings: () => ({ settings: mockSettings }),
 }));
 jest.mock("@jellyfin/sdk/lib/utils/api", () => ({
   getLibraryApi: () => ({ getItem: mockGetItem }),
   getSessionApi: () => ({
     reportPlaybackStart: mockStart,
+    reportPlaybackProgress: mockProgress,
     reportPlaybackStopped: mockStopped,
   }),
 }));
@@ -39,6 +42,7 @@ jest.mock("@/utils/customHeaders", () =>
   jest.requireActual("@/test-utils/customHeaders").customHeadersModule(),
 );
 
+import { PROGRESS_REPORT_INTERVAL } from "@/constants/Playback";
 import { useMultiviewTileStream } from "./useMultiviewTileStream";
 
 const channel = { Id: "chan-1", Type: "TvChannel" };
@@ -55,7 +59,64 @@ const stopInfo = () =>
 describe("useMultiviewTileStream", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSettings = { audioTranscodeMode: "auto" };
     mockGetItem.mockResolvedValue({ data: channel });
+  });
+
+  test("reports progress while open, and stops reporting once closed", async () => {
+    // Reported in review: only start and stop went out, so resume points and
+    // the dashboard were stale, and a crash left a live session open.
+    mockGetStreamUrl.mockResolvedValue(liveStream);
+    jest.useFakeTimers();
+    try {
+      const { result, unmount } = await renderHook(() =>
+        useMultiviewTileStream("chan-1"),
+      );
+      await waitFor(() => expect(result.current.state.status).toBe("ready"));
+      await act(async () => result.current.onPosition(42));
+      await act(async () => jest.advanceTimersByTime(PROGRESS_REPORT_INTERVAL));
+      expect(mockProgress).toHaveBeenCalledTimes(1);
+      const [progressArgs] = mockProgress.mock.calls[0] as [
+        { playbackProgressInfo: object },
+      ];
+      expect(progressArgs.playbackProgressInfo).toMatchObject({
+        ItemId: "chan-1",
+        PlaySessionId: "play-1",
+        LiveStreamId: "live-1",
+        PositionTicks: 420_000_000,
+      });
+
+      await unmount();
+      await act(async () =>
+        jest.advanceTimersByTime(PROGRESS_REPORT_INTERVAL * 3),
+      );
+      expect(mockProgress).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("asks for the user's default bitrate, as the full player does", async () => {
+    mockSettings = {
+      audioTranscodeMode: "auto",
+      defaultBitrate: { key: "8 Mb/s", value: 8_000_000 },
+    };
+    mockGetStreamUrl.mockResolvedValue(liveStream);
+    const { result } = await renderHook(() => useMultiviewTileStream("chan-1"));
+    await waitFor(() => expect(result.current.state.status).toBe("ready"));
+    expect(mockGetStreamUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ maxStreamingBitrate: 8_000_000 }),
+    );
+  });
+
+  test("a live stream opened without a URL is still closed, releasing its tuner", async () => {
+    mockGetStreamUrl.mockResolvedValue({ ...liveStream, url: null });
+    const { result } = await renderHook(() => useMultiviewTileStream("chan-1"));
+    await waitFor(() => expect(result.current.state.status).toBe("error"));
+    expect(stopInfo()).toMatchObject({
+      ItemId: "chan-1",
+      LiveStreamId: "live-1",
+    });
   });
 
   test("closing a live tile releases its tuner with the LiveStreamId", async () => {

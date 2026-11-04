@@ -14,6 +14,11 @@ describe("isAtEnd", () => {
     expect(isAtEnd(100, 1302)).toBe(false);
   });
 
+  test("takes a tighter tolerance when asked", () => {
+    expect(isAtEnd(1299.5, 1302, 1)).toBe(false);
+    expect(isAtEnd(1301.5, 1302, 1)).toBe(true);
+  });
+
   test("a stream with no known duration never ends, a live channel among them", () => {
     expect(isAtEnd(0, 0)).toBe(false);
     expect(isAtEnd(50, 0)).toBe(false);

@@ -3,12 +3,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { getShowApi } from "@jellyfin/sdk/lib/utils/api";
 import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/common/Text";
 import { Loader } from "@/components/Loader";
+import { Colors } from "@/constants/Colors";
 import {
+  MULTIVIEW_ADJACENT_EPISODES,
+  MULTIVIEW_EOF_PAUSE_TOLERANCE,
   MULTIVIEW_SEEK_BACK_SECONDS,
   MULTIVIEW_SEEK_FORWARD_SECONDS,
   MULTIVIEW_STALL_DELAY,
@@ -64,11 +67,26 @@ export function MultiviewTile({
   const api = useAtomValue(apiAtom);
   const user = useAtomValue(userAtom);
   const playerRef = useRef<MpvPlayerViewRef>(null);
+  // React clears playerRef before effect cleanups run on unmount, so the
+  // cleanup that frees the decoder reads the last player seen from here.
+  const lastPlayer = useRef<MpvPlayerViewRef | null>(null);
+  const setPlayer = useCallback((player: MpvPlayerViewRef | null) => {
+    playerRef.current = player;
+    if (player) lastPlayer.current = player;
+  }, []);
   const { state, onPosition } = useMultiviewTileStream(itemId);
-  // Read from onLoad, which fires once the player can take a mute: a mute
-  // sent before the file loads has nothing to apply to.
+  // Read when the source is built and from onLoad: a mute that arrives over
+  // the bridge after an autoplaying file has started is heard for a moment.
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
+  const readySource = state.status === "ready" ? state.source : undefined;
+  // One object per stream: a new source object makes the native view reload.
+  // The mute is read once, at load; later changes go through setMute.
+  const source = useMemo(
+    () => readySource && { ...readySource, muted: mutedRef.current },
+    [readySource],
+  );
+  const isChannel = state.status === "ready" && state.item.Type === "TvChannel";
   // The stream URL arrives well before the first frame of a live channel, so
   // the spinner stays until playback is seen to move, not until the URL.
   const playbackStarted = useRef(createPlaybackStartWatch()).current;
@@ -80,9 +98,11 @@ export function MultiviewTile({
   const lastPosition = useRef<number | null>(null);
   const duration = useRef(0);
   const lastMoveAt = useRef(Date.now());
-  const stoppedAtEnd = () =>
+  // A live channel has no end: its duration can grow with the live edge.
+  const stoppedAtEnd = (tolerance?: number) =>
+    !isChannel &&
     lastPosition.current !== null &&
-    isAtEnd(lastPosition.current, duration.current);
+    isAtEnd(lastPosition.current, duration.current, tolerance);
 
   useEffect(() => {
     void playerRef.current?.setMute(muted);
@@ -90,12 +110,12 @@ export function MultiviewTile({
 
   // Free the decoder as soon as the tile goes, not when the view is collected:
   // with several players up, the next tile may need that memory right away.
-  useEffect(() => {
-    const player = playerRef;
-    return () => {
-      void player.current?.destroy();
-    };
-  }, []);
+  useEffect(
+    () => () => {
+      void lastPlayer.current?.destroy();
+    },
+    [],
+  );
 
   // A stream that stops delivering sends no more ticks, so the stall is
   // noticed by a clock rather than by a tick. A pause is not a stall, and
@@ -142,7 +162,7 @@ export function MultiviewTile({
         seriesId: state.item.SeriesId,
         adjacentTo: itemId,
         userId: user?.Id,
-        limit: 3,
+        limit: MULTIVIEW_ADJACENT_EPISODES,
       });
       return nextEpisodeIn(res.data.Items, itemId);
     },
@@ -244,8 +264,8 @@ export function MultiviewTile({
     >
       {state.status === "ready" && (
         <MpvPlayerView
-          ref={playerRef}
-          source={state.source}
+          ref={setPlayer}
+          source={source}
           style={StyleSheet.absoluteFill}
           onLoad={() => void playerRef.current?.setMute(mutedRef.current)}
           onProgress={(e) =>
@@ -258,7 +278,8 @@ export function MultiviewTile({
               // The clock restarts on resume, or the pause reads as a stall.
               if (!isPaused) lastMoveAt.current = Date.now();
               // MPV can also hold the last frame paused once a file is done.
-              else if (stoppedAtEnd()) setEnded(true);
+              else if (stoppedAtEnd(MULTIVIEW_EOF_PAUSE_TOLERANCE))
+                setEnded(true);
             }
             if (isLoading !== undefined) setSeeking(isLoading);
           }}
@@ -432,7 +453,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   heard: {
-    borderColor: "#9334E9",
+    borderColor: Colors.primary,
   },
   center: {
     position: "absolute",
@@ -473,7 +494,7 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   endedButtonPrimary: {
-    backgroundColor: "#9334E9",
+    backgroundColor: Colors.primary,
   },
   controls: {
     flexDirection: "row",

@@ -6,7 +6,13 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, useWindowDimensions, View } from "react-native";
+import {
+  AppState,
+  Platform,
+  Pressable,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/common/Text";
@@ -18,7 +24,9 @@ import {
 } from "@/constants/Multiview";
 import useRouter from "@/hooks/useAppRouter";
 import { useOrientation } from "@/hooks/useOrientation";
+import { useInvalidatePlaybackProgressCache } from "@/hooks/useRevalidatePlaybackProgressCache";
 import { OrientationLock } from "@/packages/expo-screen-orientation";
+import { isMultiviewAvailable } from "@/utils/multiview/availability";
 import {
   addTile,
   emptyMultiview,
@@ -27,7 +35,7 @@ import {
   promoteTile,
   removeTile,
   replaceTile,
-  tapTile,
+  tapWhileToolbar,
   tileFrames,
   toggleAllAudio,
   toggleLayout,
@@ -35,7 +43,23 @@ import {
 
 const KEEP_AWAKE_TAG = "multiview";
 
-export default function MultiviewScreen() {
+/**
+ * The route can still be reached by a deep link where multiview cannot run,
+ * so there it goes straight back instead of opening tiles that cannot play.
+ */
+export default function MultiviewRoute() {
+  return isMultiviewAvailable(Platform) ? <MultiviewScreen /> : <GoBack />;
+}
+
+function GoBack() {
+  const router = useRouter();
+  useEffect(() => {
+    router.back();
+  }, [router]);
+  return null;
+}
+
+function MultiviewScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -43,6 +67,19 @@ export default function MultiviewScreen() {
   const { lockOrientation, unlockOrientation } = useOrientation();
   const { showActionSheetWithOptions } = useActionSheet();
   const { itemIds } = useLocalSearchParams<{ itemIds?: string }>();
+
+  // Leaving refreshes Continue Watching and the rest, as the full player does
+  // when it stops: the tiles' stop reports move resume points and watched
+  // states. Read through a ref, since the function changes every render.
+  const revalidateProgressCache = useInvalidatePlaybackProgressCache();
+  const revalidateRef = useRef(revalidateProgressCache);
+  revalidateRef.current = revalidateProgressCache;
+  useEffect(
+    () => () => {
+      void revalidateRef.current();
+    },
+    [],
+  );
 
   const nextKey = useRef(0);
   const newKey = () => `tile-${nextKey.current++}`;
@@ -61,13 +98,19 @@ export default function MultiviewScreen() {
   useEffect(() => {
     void lockOrientation(OrientationLock.LANDSCAPE);
     void activateKeepAwakeAsync(KEEP_AWAKE_TAG);
+    // iOS drops the lock while the app is in the background, as the full
+    // player's layout notes; put it back on return.
+    const subscription = AppState.addEventListener("change", (next) => {
+      if (next === "active") void lockOrientation(OrientationLock.LANDSCAPE);
+    });
     return () => {
+      subscription.remove();
       void unlockOrientation();
       deactivateKeepAwake(KEEP_AWAKE_TAG);
     };
   }, [lockOrientation, unlockOrientation]);
 
-  // The toolbar fades out so it does not sit over the games; any touch brings
+  // The toolbar fades out so it does not sit over the video; any touch brings
   // it back. It stays while the picker is open.
   useEffect(() => {
     if (!toolbarVisible || pickerOpen || state.tiles.length === 0) return;
@@ -83,10 +126,14 @@ export default function MultiviewScreen() {
     setLastTouch(Date.now());
   }, []);
 
-  const onTilePress = useCallback((key: string) => {
-    setState((s) => tapTile(s, key));
-    setToolbarVisible(true);
-  }, []);
+  const onTilePress = useCallback(
+    (key: string) => {
+      setState((s) => tapWhileToolbar(s, key, toolbarVisible));
+      setToolbarVisible(true);
+      setLastTouch(Date.now());
+    },
+    [toolbarVisible],
+  );
 
   const onTileLongPress = useCallback(
     (key: string) =>

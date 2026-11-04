@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import { getLibraryApi, getLiveTvApi } from "@jellyfin/sdk/lib/utils/api";
+import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
@@ -12,6 +13,8 @@ import { ItemImage } from "@/components/common/ItemImage";
 import { Text } from "@/components/common/Text";
 import { Loader } from "@/components/Loader";
 import {
+  MULTIVIEW_PICKER_WIDTH,
+  MULTIVIEW_RESUME_LIMIT,
   MULTIVIEW_SEARCH_DEBOUNCE,
   MULTIVIEW_SEARCH_LIMIT,
 } from "@/constants/Multiview";
@@ -88,7 +91,7 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
         userId: user!.Id!,
         includeItemTypes: ["Movie", "Episode"],
         enableImageTypes: ["Primary", "Thumb"],
-        limit: 20,
+        limit: MULTIVIEW_RESUME_LIMIT,
       });
       return res.data.Items ?? [];
     },
@@ -175,12 +178,15 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
     </View>
   );
 
-  const tvList = () => {
+  // Only the notes for an empty or loading channel list; the channels
+  // themselves go in a virtualized list, since a server can have hundreds.
+  const tvNote = () => {
     if (channels.isLoading) return spinner;
     if (channels.data?.length === 0) return note(t("live_tv.no_channels"));
     if (shownChannels.length === 0) return noMatches;
-    return shownChannels.map((c) => row(c, c.CurrentProgram?.Name));
+    return null;
   };
+  const tvNoteContent = tab === "tv" ? tvNote() : null;
 
   const mediaList = () => {
     if (trimmedQuery) {
@@ -220,7 +226,7 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
         <View
           className='bg-neutral-900'
           style={{
-            width: 380,
+            width: MULTIVIEW_PICKER_WIDTH,
             maxWidth: "70%",
             paddingTop: insets.top + 12,
             paddingBottom: insets.bottom,
@@ -283,9 +289,18 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
           </View>
           {/* Taps reach a row while the keyboard is up, instead of only
               dismissing it. */}
-          <ScrollView keyboardShouldPersistTaps='handled'>
-            {tab === "tv" ? tvList() : mediaList()}
-          </ScrollView>
+          {tab === "tv" && !tvNoteContent ? (
+            <FlashList
+              data={shownChannels}
+              keyExtractor={(c, i) => c.Id ?? String(i)}
+              keyboardShouldPersistTaps='handled'
+              renderItem={({ item: c }) => row(c, c.CurrentProgram?.Name)}
+            />
+          ) : (
+            <ScrollView keyboardShouldPersistTaps='handled'>
+              {tab === "tv" ? tvNoteContent : mediaList()}
+            </ScrollView>
+          )}
         </View>
       </View>
     </Modal>

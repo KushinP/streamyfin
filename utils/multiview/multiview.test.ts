@@ -9,6 +9,7 @@ import {
   replaceTile,
   selectAudio,
   tapTile,
+  tapWhileToolbar,
   tileFrames,
   toggleAllAudio,
   toggleLayout,
@@ -121,6 +122,20 @@ describe("replaceTile", () => {
   test("changes nothing for a tile that is not there", () => {
     const state = withTiles("a");
     expect(replaceTile(state, "missing", "c")).toBe(state);
+  });
+});
+
+describe("tapWhileToolbar", () => {
+  test("with the toolbar hidden a tap only brings it back", () => {
+    // Reported in review: the tap meant to show the controls also moved the
+    // sound, and in focus swapped the big tile.
+    const focus = toggleLayout(withTiles("a", "b"));
+    expect(tapWhileToolbar(focus, "k-b", false)).toBe(focus);
+  });
+
+  test("with the toolbar up a tap does what a tap does", () => {
+    const focus = toggleLayout(withTiles("a", "b"));
+    expect(tapWhileToolbar(focus, "k-b", true)).toEqual(tapTile(focus, "k-b"));
   });
 });
 

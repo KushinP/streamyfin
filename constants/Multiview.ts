@@ -28,6 +28,18 @@ export const MULTIVIEW_SEARCH_DEBOUNCE = 200;
 /** How many movies and episodes a picker search lists. */
 export const MULTIVIEW_SEARCH_LIMIT = 30;
 
+/** How many part-watched items the picker's Continue watching lists. */
+export const MULTIVIEW_RESUME_LIMIT = 20;
+
+/**
+ * How many episodes around a finished one are asked for to find the next:
+ * the one before, itself and the one after.
+ */
+export const MULTIVIEW_ADJACENT_EPISODES = 3;
+
+/** Width, in points, of the picker panel; it never takes over 70% of the screen. */
+export const MULTIVIEW_PICKER_WIDTH = 380;
+
 /** How far, in seconds, a tile's back button goes. */
 export const MULTIVIEW_SEEK_BACK_SECONDS = 10;
 
@@ -47,6 +59,13 @@ export const MULTIVIEW_STALL_DELAY = 2_000;
  * progress tick lands a little short of the duration.
  */
 export const MULTIVIEW_END_TOLERANCE = 3;
+
+/**
+ * How close, in seconds, a pause has to be to the end to count as MPV holding
+ * the last frame rather than the user pausing near the end. Tighter than
+ * MULTIVIEW_END_TOLERANCE, which judges a tile whose ticks have stopped.
+ */
+export const MULTIVIEW_EOF_PAUSE_TOLERANCE = 1;
 
 /**
  * Buffer settings for one tile. Each tile is its own MPV instance, so the

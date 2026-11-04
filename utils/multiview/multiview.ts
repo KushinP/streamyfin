@@ -156,6 +156,16 @@ export const toggleLayout = (state: MultiviewState): MultiviewState => {
  * multiview); otherwise a tap picks which tile is heard. Hearing every tile
  * stays a choice the tap does not undo.
  */
+/**
+ * A tap on a tile, given whether the toolbar is showing. With it hidden the
+ * tap is a request to see the controls, so it changes nothing else.
+ */
+export const tapWhileToolbar = (
+  state: MultiviewState,
+  key: string,
+  toolbarVisible: boolean,
+): MultiviewState => (toolbarVisible ? tapTile(state, key) : state);
+
 export const tapTile = (state: MultiviewState, key: string): MultiviewState => {
   if (state.layout === "focus" && state.tiles[0]?.key !== key) {
     return promoteTile(state, key);

@@ -5,6 +5,7 @@ import type {
 import { getLibraryApi, getSessionApi } from "@jellyfin/sdk/lib/utils/api";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PROGRESS_REPORT_INTERVAL } from "@/constants/Playback";
 import type { MpvVideoSource } from "@/modules";
 import { apiAtom, userAtom } from "@/utils/atoms/api";
 import { useSettings } from "@/utils/atoms/settings";
@@ -42,6 +43,9 @@ export const useMultiviewTileStream = (itemId: string) => {
   const user = useAtomValue(userAtom);
   const { settings } = useSettings();
   const audioMode = settings?.audioTranscodeMode;
+  // The user's default cap, as the full player opens a stream with; four
+  // uncapped tiles would each ask for the source's full bitrate.
+  const maxBitrate = settings?.defaultBitrate?.value;
   const [state, setState] = useState<TileStreamState>({ status: "loading" });
   // Seconds; the stop report saves it as the resume point of a library item.
   const positionRef = useRef(0);
@@ -50,6 +54,32 @@ export const useMultiviewTileStream = (itemId: string) => {
     if (!api || !user?.Id) return;
     let cancelled = false;
     let opened: { item: BaseItemDto; stream: TileStream } | null = null;
+    let progressTimer: ReturnType<typeof setInterval> | undefined;
+
+    // At the full player's cadence: keeps the resume point and the server's
+    // dashboard current, and bounds how long a crash can leave a live
+    // session, and its tuner, looking busy.
+    const reportProgress = (session: {
+      item: BaseItemDto;
+      stream: TileStream;
+    }) =>
+      getSessionApi(api)
+        .reportPlaybackProgress({
+          playbackProgressInfo: {
+            ItemId: session.item.Id,
+            MediaSourceId: session.stream.mediaSource?.Id ?? undefined,
+            PlaySessionId: session.stream.sessionId ?? undefined,
+            LiveStreamId: session.stream.mediaSource?.LiveStreamId ?? undefined,
+            PositionTicks: secondsToTicks(positionRef.current),
+          },
+        })
+        .catch((error) =>
+          writeToLog(
+            "ERROR",
+            "multiview: progress report failed",
+            errorText(error),
+          ),
+        );
 
     const reportStopped = (session: {
       item: BaseItemDto;
@@ -90,10 +120,18 @@ export const useMultiviewTileStream = (itemId: string) => {
           item,
           userId: user.Id,
           startTimeTicks: startTicks,
+          maxStreamingBitrate: maxBitrate,
           // Every tile renders with MPV, whatever the full player is set to.
           deviceProfile: generateDeviceProfile({ player: "mpv", audioMode }),
         });
-        if (!res?.url) throw new Error("No stream for this item");
+        if (!res?.url) {
+          // A live stream can be opened on the server, holding a tuner, even
+          // when no URL comes back; it is closed here or it stays held.
+          if (res?.mediaSource?.LiveStreamId) {
+            void reportStopped({ item, stream: { ...res, url: "" } });
+          }
+          throw new Error("No stream for this item");
+        }
         const stream: TileStream = { ...res, url: res.url };
         opened = { item, stream };
         // Removed while the stream was opening: close what was just opened.
@@ -130,6 +168,11 @@ export const useMultiviewTileStream = (itemId: string) => {
               errorText(error),
             ),
           );
+        const session = opened;
+        progressTimer = setInterval(
+          () => void reportProgress(session),
+          PROGRESS_REPORT_INTERVAL,
+        );
       } catch (error) {
         writeToLog("ERROR", "multiview: could not open tile", errorText(error));
         if (!cancelled) setState({ status: "error" });
@@ -139,9 +182,10 @@ export const useMultiviewTileStream = (itemId: string) => {
     void open();
     return () => {
       cancelled = true;
+      clearInterval(progressTimer);
       if (opened) void reportStopped(opened);
     };
-  }, [api, user?.Id, itemId, audioMode]);
+  }, [api, user?.Id, itemId, audioMode, maxBitrate]);
 
   const onPosition = useCallback((seconds: number) => {
     positionRef.current = seconds;

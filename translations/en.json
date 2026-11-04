@@ -161,6 +161,8 @@
         "title": "Appearance",
         "download_live_activity": "Live Activity",
         "download_live_activity_hint": "Show download progress on the Lock Screen and in the Dynamic Island.",
+        "ambient_backgrounds": "Ambient backgrounds",
+        "ambient_backgrounds_hint": "Tint movie and show pages with the colours of their artwork.",
         "merge_next_up_continue_watching": "Merge Continue watching & Next up",
         "merge_next_up_continue_watching_hint": "Combine Continue Watching and Next Up into a single home row.",
         "show_upcoming_on_home": "Upcoming episodes on home",

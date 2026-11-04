@@ -26,11 +26,14 @@ import { TVSeriesPage } from "@/components/series/TVSeriesPage";
 import { SyncPlayButton } from "@/components/syncplay/SyncPlayButton";
 import { Colors } from "@/constants/Colors";
 import { LOGO_HEIGHT } from "@/constants/Images";
+import { useImageColorsReturn } from "@/hooks/useImageColorsReturn";
 import { useLeaveWhenGone } from "@/hooks/useLeaveWhenGone";
 import { playableQueueItems, useShuffleQueue } from "@/hooks/useShuffleQueue";
 import { useDownload } from "@/providers/DownloadProvider";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
 import { OfflineModeProvider } from "@/providers/OfflineModeProvider";
+import { ambientTint } from "@/utils/ambientTint";
+import { useSettings } from "@/utils/atoms/settings";
 import {
   buildOfflineSeriesFromEpisodes,
   getDownloadedEpisodesForSeries,
@@ -97,6 +100,16 @@ const page: React.FC = () => {
     refetchInterval: !isOffline && Platform.isTV ? 60 * 1000 : undefined,
     enabled: isOffline || (!!api && !!user?.Id),
   });
+
+  const { settings } = useSettings();
+  // Offline there is no server to fetch the artwork from.
+  const seriesColors = useImageColorsReturn({
+    item,
+    disabled: isOffline || !settings?.ambientBackgrounds,
+  });
+  const ambientColor = settings?.ambientBackgrounds
+    ? ambientTint(seriesColors.primary)
+    : null;
 
   // Offline, the series is nothing but its downloaded episodes, so the query
   // above answers null once the last one is deleted. There is nothing left to
@@ -264,6 +277,7 @@ const page: React.FC = () => {
     <OfflineModeProvider isOffline={isOffline}>
       <ParallaxScrollView
         headerHeight={HEADER_HEIGHT}
+        ambientColor={ambientColor}
         headerImage={
           backdropUrl ? (
             <Image

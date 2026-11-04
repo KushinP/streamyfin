@@ -63,6 +63,19 @@ export const AppearanceSettings: React.FC = () => {
             />
           </ListItem>
         )}
+        {!Platform.isTV && (
+          <ListItem
+            title={t("home.settings.appearance.ambient_backgrounds")}
+            subtitle={t("home.settings.appearance.ambient_backgrounds_hint")}
+          >
+            <SettingSwitch
+              value={settings.ambientBackgrounds}
+              onValueChange={(value) =>
+                updateSettings({ ambientBackgrounds: value })
+              }
+            />
+          </ListItem>
+        )}
         <ListItem
           title={t("home.settings.appearance.merge_next_up_continue_watching")}
           subtitle={t(

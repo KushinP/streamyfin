@@ -635,11 +635,9 @@ const HomeMobile = () => {
           className='flex flex-col space-y-4'
           style={{ paddingTop: Platform.OS === "android" ? 10 : 0 }}
         >
-          <HomeHeroCarousel
-            onActiveItemChange={
-              settings?.ambientBackgrounds ? setHeroItem : undefined
-            }
-          />
+          {/* Always listened to, so the backdrop is right the moment the
+              setting is turned back on. */}
+          <HomeHeroCarousel onActiveItemChange={setHeroItem} />
           {sections.map((section, index) => {
             // Render Streamystats sections after Recently Added sections
             // For default sections: place after Recently Added, before Suggested Movies (if present)

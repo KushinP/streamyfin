@@ -41,10 +41,9 @@ import {
   guideHours,
   guideWindow,
   nowLineOffset,
+  startOfHour,
 } from "@/utils/livetv/guideLayout";
 import { channelNumber } from "@/utils/livetv/nowNext";
-
-const HOUR_MS = 60 * 60 * 1000;
 
 const channelIds = (page: BaseItemDtoQueryResult | undefined) =>
   (page?.Items ?? [])
@@ -64,8 +63,13 @@ export default function LiveTvGuidePage() {
   const today = new Date(now).toDateString();
   const days = useMemo(() => guideDays(now, LIVE_TV_GUIDE_DAYS), [today]);
   const day = days[dayIndex] ?? days[0];
-  const hour = Math.floor(now / HOUR_MS);
+  const hour = startOfHour(now);
   const window = useMemo(() => guideWindow(day, now), [day, hour]);
+  // The programs are asked for by the whole day, not by the window: the
+  // window moves on every hour, and a query keyed on it emptied every row
+  // until the refetch landed. The rows cut the day to the window themselves.
+  const dayStart = day.getTime();
+  const dayEnd = window.end;
   const width = guideHours(window).length * LIVE_TV_GUIDE_HOUR_WIDTH;
   const nowLine = nowLineOffset(now, window, LIVE_TV_GUIDE_HOUR_WIDTH);
 
@@ -99,12 +103,12 @@ export default function LiveTvGuidePage() {
     queries: pages.map((page) => {
       const ids = channelIds(page);
       return {
-        queryKey: ["livetv", "guide", "programs", window.start, ids],
+        queryKey: ["livetv", "guide", "programs", dayStart, ids],
         queryFn: async () => {
           const res = await getLiveTvApi(api!).getPrograms({
             getProgramsDto: {
-              MinEndDate: new Date(window.start).toISOString(),
-              MaxStartDate: new Date(window.end).toISOString(),
+              MinEndDate: new Date(dayStart).toISOString(),
+              MaxStartDate: new Date(dayEnd).toISOString(),
               ChannelIds: ids,
               ImageTypeLimit: 1,
               EnableImages: false,

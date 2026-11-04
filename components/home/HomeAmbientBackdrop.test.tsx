@@ -2,6 +2,7 @@ import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import { act, render, screen } from "@testing-library/react-native";
 import {
   HOME_AMBIENT_BLUR_RADIUS,
+  HOME_AMBIENT_CROSSFADE_MS,
   HOME_AMBIENT_DEBOUNCE_MS,
   HOME_AMBIENT_IMAGE_WIDTH,
 } from "@/constants/HomeAmbient";
@@ -62,6 +63,20 @@ describe("HomeAmbientBackdrop", () => {
     // "b" never landed: "c" took the other layer, "a" fades out under it.
     expect(layerUri(0)).toContain("/Items/a/");
     expect(layerUri(1)).toContain("/Items/c/");
+  });
+
+  // Reported: filtering the hero down to nothing left the last backdrop up.
+  test("fades away when the hero loses its slide", async () => {
+    const view = await render(<HomeAmbientBackdrop item={movie("a")} />);
+    await act(async () => jest.advanceTimersByTime(HOME_AMBIENT_DEBOUNCE_MS));
+    expect(layerUri(0)).toContain("/Items/a/");
+
+    await act(async () => view.rerender(<HomeAmbientBackdrop item={null} />));
+    await act(async () => jest.advanceTimersByTime(HOME_AMBIENT_DEBOUNCE_MS));
+    await act(async () => jest.advanceTimersByTime(HOME_AMBIENT_CROSSFADE_MS));
+
+    expect(screen.queryByTestId("home-ambient-layer-0")).toBeNull();
+    expect(screen.queryByTestId("home-ambient-layer-1")).toBeNull();
   });
 
   test("draws nothing without a slide", async () => {

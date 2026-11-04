@@ -22,6 +22,20 @@ describe("guideWindow", () => {
     expect(window.end).toBe(at(4, 0));
   });
 
+  // Reported: in India the guide started at 14:30 and labelled every hour
+  // at :30, because the hour was rounded in UTC.
+  test("starts at the local hour in a zone half an hour off UTC", () => {
+    const previous = process.env.TZ;
+    process.env.TZ = "Asia/Kolkata";
+    try {
+      const now = new Date(2026, 10, 3, 14, 40).getTime();
+      const start = new Date(guideWindow(new Date(now), now).start);
+      expect([start.getHours(), start.getMinutes()]).toEqual([14, 0]);
+    } finally {
+      process.env.TZ = previous;
+    }
+  });
+
   test("another day runs from midnight to midnight", () => {
     const window = guideWindow(new Date(at(4, 9)), at(3, 20, 15));
     expect(window.start).toBe(at(4, 0));

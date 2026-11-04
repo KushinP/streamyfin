@@ -28,6 +28,17 @@ const nextDay = (dayStart: number) => {
 };
 
 /**
+ * The top of the hour `time` is in, by the viewer's clock. Not a whole number
+ * of epoch hours: in a zone half an hour off UTC (India, Adelaide,
+ * Newfoundland) that lands on :30.
+ */
+export const startOfHour = (time: number) => {
+  const hour = new Date(time);
+  hour.setMinutes(0, 0, 0);
+  return hour.getTime();
+};
+
+/**
  * The guide for `day`: today from the top of the current hour, so what is on
  * now sits at the left edge; any other day from midnight. Both end at the
  * next midnight, by the viewer's clock (setDate keeps a DST day right).
@@ -35,7 +46,7 @@ const nextDay = (dayStart: number) => {
 export const guideWindow = (day: Date, now: number): GuideWindow => {
   const dayStart = startOfDay(day.getTime());
   const isToday = dayStart === startOfDay(now);
-  const start = isToday ? Math.floor(now / HOUR_MS) * HOUR_MS : dayStart;
+  const start = isToday ? startOfHour(now) : dayStart;
   return { start: Math.max(start, dayStart), end: nextDay(dayStart) };
 };
 

@@ -55,6 +55,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -221,13 +222,17 @@ private fun HeroPager(
   // `settledPage`, not `currentPage`: the backdrop changes once a swipe has
   // landed, not each time a drag crosses the halfway point.
   val latestItems by rememberUpdatedState(items)
+  // The items are read inside the snapshot too, so a refetch that swaps the
+  // slides under the same page (same count, new first item) reports again;
+  // distinctUntilChanged keeps a recomposition on the same slide quiet.
   LaunchedEffect(pagerState) {
-    snapshotFlow { pagerState.settledPage }.collect { page ->
+    snapshotFlow {
       val current = latestItems
-      if (current.isNotEmpty()) {
-        onActiveItemChange(current[Math.floorMod(page, current.size)].id)
-      }
+      if (current.isEmpty()) null
+      else current[Math.floorMod(pagerState.settledPage, current.size)].id
     }
+      .distinctUntilChanged()
+      .collect { id -> if (id != null) onActiveItemChange(id) }
   }
 
   val scope = rememberCoroutineScope()

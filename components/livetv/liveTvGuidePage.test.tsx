@@ -150,14 +150,16 @@ describe("LiveTvGuidePage", () => {
     beforeEach(() => jest.spyOn(Date, "now").mockReturnValue(NOW));
     afterEach(() => jest.restoreAllMocks());
 
-    test("asks for today from the top of the hour and draws the now line", async () => {
+    test("asks for the whole of today and draws the now line", async () => {
       const api = guideApi();
       const { store } = await renderGuide();
       await act(async () => store.set(apiAtom, api));
 
       await waitFor(() => expect(api.mock.history.post).toHaveLength(1));
       expect(JSON.parse(api.mock.history.post[0].data)).toMatchObject({
-        MinEndDate: new Date(2026, 10, 3, 20).toISOString(),
+        // The day, not the window: the window moves on every hour, and a
+        // query keyed on it emptied every row until the refetch landed.
+        MinEndDate: new Date(2026, 10, 3).toISOString(),
         MaxStartDate: new Date(2026, 10, 4).toISOString(),
       });
       // A quarter of the way into the first hour.

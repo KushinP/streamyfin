@@ -57,7 +57,24 @@ export const HomeAmbientBackdrop = memo(
     ]).current;
 
     useEffect(() => {
-      if (!url) return;
+      // No slide (the hero filtered down to nothing): fade out, then let go
+      // of the images.
+      if (!url) {
+        const out = Animated.parallel(
+          opacity.map((layer) =>
+            Animated.timing(layer, {
+              toValue: 0,
+              duration: HOME_AMBIENT_CROSSFADE_MS,
+              easing: Easing.inOut(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ),
+        );
+        out.start(({ finished }) => {
+          if (finished) setUrls([null, null]);
+        });
+        return () => out.stop();
+      }
       const incoming = active.current === 0 ? 1 : 0;
       active.current = incoming;
       setUrls((current) => {

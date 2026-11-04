@@ -88,8 +88,6 @@ class HeroCarouselExpoView: ExpoView {
   let onItemPress = EventDispatcher()
   let onFilterToggle = EventDispatcher()
   let onActiveItemChange = EventDispatcher()
-  /// The item last reported, so a re-render on the same slide stays quiet.
-  private var lastActiveItemID: String?
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
@@ -106,10 +104,11 @@ class HeroCarouselExpoView: ExpoView {
       onFilterToggle: { [weak self] key in
         self?.onFilterToggle(["key": key])
       },
+      // Not de-duplicated here: JS resets its item to null when the slides
+      // go away, and the same slide coming back has to be reported again.
+      // The pagers only report a change anyway.
       onActiveItemChange: { [weak self] itemId in
-        guard let self, itemId != self.lastActiveItemID else { return }
-        self.lastActiveItemID = itemId
-        self.onActiveItemChange(["id": itemId])
+        self?.onActiveItemChange(["id": itemId])
       }
     )
     let hostingController = UIHostingController(rootView: root)

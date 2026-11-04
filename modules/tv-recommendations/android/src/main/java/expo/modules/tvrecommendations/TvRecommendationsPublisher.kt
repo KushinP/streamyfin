@@ -344,7 +344,8 @@ internal object TvRecommendationsPublisher {
         val updated = Channel.Builder()
           .setType(TvContractCompat.Channels.TYPE_PREVIEW)
           .setDisplayName(displayName)
-          .setAppLinkIntentUri(buildIntentUri(context, "streamyfin://"))
+          // The app's own scheme: APP_SCHEME in constants/AppScheme.ts.
+          .setAppLinkIntentUri(buildIntentUri(context, "superfin://"))
           .build()
 
         try {
@@ -380,7 +381,8 @@ internal object TvRecommendationsPublisher {
     val channel = Channel.Builder()
       .setType(TvContractCompat.Channels.TYPE_PREVIEW)
       .setDisplayName(displayName)
-      .setAppLinkIntentUri(buildIntentUri(context, "streamyfin://"))
+      // The app's own scheme: APP_SCHEME in constants/AppScheme.ts.
+      .setAppLinkIntentUri(buildIntentUri(context, "superfin://"))
       .build()
 
     val channelUri = try {

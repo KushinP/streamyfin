@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import * as BackgroundTask from "expo-background-task";
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import { Image } from "expo-image";
 import { DarkTheme, ThemeProvider } from "expo-router/react-navigation";
@@ -59,6 +60,7 @@ import {
   notificationRoute,
   responseRoute,
 } from "@/utils/notificationRoute";
+import { pushProjectId } from "@/utils/pushProjectId";
 import {
   queryDehydrateOptions,
   withoutPersistedMutations,
@@ -407,11 +409,11 @@ function Layout() {
       await registerBackgroundFetchAsyncSessions();
     }
 
-    // only create push token for real devices (pointless for emulators)
-    if (Device.isDevice) {
-      Notifications?.getExpoPushTokenAsync({
-        projectId: "e79219d1-797f-4fbe-9fa1-cfd360690a68",
-      })
+    // only create push token for real devices (pointless for emulators), and
+    // only for the EAS project this build belongs to
+    const projectId = pushProjectId(Constants.expoConfig);
+    if (Device.isDevice && projectId) {
+      Notifications?.getExpoPushTokenAsync({ projectId })
         .then((token: ExpoPushToken) => {
           if (token) {
             console.log("Expo push token obtained:", token.data);

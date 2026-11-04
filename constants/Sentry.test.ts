@@ -7,24 +7,23 @@ const { expo } = JSON.parse(
 );
 
 // Only builds carrying these identifiers, as they are or with the suffix a
-// sideloading tool appends, report into the project's Sentry
+// sideloading tool appends, report into upstream Streamyfin's Sentry
 // (utils/sentry.ts). The list is a constant and not a runtime read of the
-// config so that a fork's rename does not move it, which means nothing but
-// this test keeps it in step with the identifiers the project really ships.
-// A fork that renames the app should leave the constant alone and point
-// EXPO_PUBLIC_SENTRY_DSN at its own project.
+// config so that a fork's rename does not move it. This repository is such a
+// fork (SuperFin): it keeps upstream's list as it is, so its builds never
+// report into upstream's project, and sets EXPO_PUBLIC_SENTRY_DSN for its own.
 describe("OFFICIAL_APPLICATION_IDS", () => {
-  test("holds the iOS and tvOS bundle identifier of app.json", () => {
-    expect(OFFICIAL_APPLICATION_IDS).toContain(expo.ios.bundleIdentifier);
-  });
-
-  test("holds the Android application id of app.json", () => {
-    expect(OFFICIAL_APPLICATION_IDS).toContain(expo.android.package);
-  });
-
-  test("holds nothing else", () => {
-    expect([...OFFICIAL_APPLICATION_IDS].sort()).toEqual(
-      [...new Set([expo.ios.bundleIdentifier, expo.android.package])].sort(),
+  test("still names upstream Streamyfin's ids", () => {
+    expect([...OFFICIAL_APPLICATION_IDS]).toEqual(
+      expect.arrayContaining(["com.fredrikburmester.streamyfin"]),
     );
+  });
+
+  test("does not hold this fork's iOS bundle identifier", () => {
+    expect(OFFICIAL_APPLICATION_IDS).not.toContain(expo.ios.bundleIdentifier);
+  });
+
+  test("does not hold this fork's Android application id", () => {
+    expect(OFFICIAL_APPLICATION_IDS).not.toContain(expo.android.package);
   });
 });

@@ -446,10 +446,8 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
       try {
         await getSessionApi(api).postFullCapabilities({
           clientCapabilitiesDto: {
-            AppStoreUrl:
-              "https://apps.apple.com/us/app/streamyfin/id6593660679",
-            IconUrl:
-              "https://raw.githubusercontent.com/streamyfin/streamyfin/refs/heads/develop/assets/images/streamyfin-client-badge.png",
+            // No AppStoreUrl or IconUrl: upstream Streamyfin's would point the
+            // server's dashboard at an app this fork (SuperFin) is not.
             PlayableMediaTypes: ["Audio", "Video"],
             SupportedCommands: supportedCommands(Platform.isTV),
             SupportsMediaControl: true,

@@ -358,7 +358,7 @@ public class BackgroundDownloaderModule: Module {
 
   private func initializeSessionLocked() {
     let config = URLSessionConfiguration.background(
-      withIdentifier: "com.fredrikburmester.streamyfin.backgrounddownloader"
+      withIdentifier: DownloaderIdentifiers.backgroundSession
     )
     config.allowsCellularAccess = true
     config.sessionSendsLaunchEvents = true

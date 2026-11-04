@@ -34,10 +34,10 @@ describe("redirectSystemPath", () => {
 
   test("passes the app's own links through untouched", () => {
     for (const path of [
-      "streamyfin:///",
-      "streamyfin://",
-      "streamyfin://topshelf/item?id=f137a2dd21bbc1b99aa5c0f6bf02a805",
-      "streamyfin://topshelf/play?id=f137a2dd21bbc1b99aa5c0f6bf02a805",
+      "superfin:///",
+      "superfin://",
+      "superfin://topshelf/item?id=f137a2dd21bbc1b99aa5c0f6bf02a805",
+      "superfin://topshelf/play?id=f137a2dd21bbc1b99aa5c0f6bf02a805",
       "/(auth)/(tabs)/(home)",
     ]) {
       expect(redirectSystemPath({ path, initial: true })).toBe(path);
@@ -48,7 +48,7 @@ describe("redirectSystemPath", () => {
   // The scheme alone decides: a link of the app that happens to mention the
   // music player is still the app's.
   test("keeps an app link whose path mentions the music player", () => {
-    const path = "streamyfin://search?q=trackplayer://notification.click";
+    const path = "superfin://search?q=trackplayer://notification.click";
     expect(redirectSystemPath({ path, initial: false })).toBe(path);
   });
 });

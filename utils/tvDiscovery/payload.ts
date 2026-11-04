@@ -1,5 +1,6 @@
 import type { Api } from "@jellyfin/sdk";
 import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
+import { APP_SCHEME } from "@/constants/AppScheme";
 import { getWideImageUrl } from "@/utils/jellyfin/image/getWideImageUrl";
 import { isPlayableItem } from "@/utils/jellyfin/media/isPlayableItem";
 
@@ -168,7 +169,7 @@ function getTVDiscoveryRoute(item: BaseItemDto): string {
     }
   }
 
-  return `streamyfin://topshelf/item?${params.join("&")}`;
+  return `${APP_SCHEME}://topshelf/item?${params.join("&")}`;
 }
 
 function getTVDiscoveryPlayRoute(item: BaseItemDto, route: string): string {
@@ -179,7 +180,7 @@ function getTVDiscoveryPlayRoute(item: BaseItemDto, route: string): string {
   // button on the remote from being a dead key on those tiles.
   if (!isPlayableItem(item)) return route;
 
-  return `streamyfin://topshelf/play?id=${encodeURIComponent(item.Id!)}`;
+  return `${APP_SCHEME}://topshelf/play?id=${encodeURIComponent(item.Id!)}`;
 }
 
 function sectionFromItems(

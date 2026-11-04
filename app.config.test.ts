@@ -103,3 +103,44 @@ test("loading the config leaves Node's module loader alone", () => {
   });
   expect({ ...handlers }).toEqual(before);
 });
+
+/** The resolved config with the Firebase file given, for a phone or a TV build. */
+const resolvedWithFirebase = (tv: boolean) => {
+  const previous = {
+    tv: process.env.EXPO_TV,
+    firebase: process.env.GOOGLE_SERVICES_JSON,
+  };
+  process.env.EXPO_TV = tv ? "1" : "0";
+  process.env.GOOGLE_SERVICES_JSON = "/secrets/google-services.json";
+  try {
+    return resolveConfig({
+      config: structuredClone(appJson.expo),
+    } as ConfigContext);
+  } finally {
+    if (previous.tv === undefined) delete process.env.EXPO_TV;
+    else process.env.EXPO_TV = previous.tv;
+    if (previous.firebase === undefined)
+      delete process.env.GOOGLE_SERVICES_JSON;
+    else process.env.GOOGLE_SERVICES_JSON = previous.firebase;
+  }
+};
+
+// Fire TV has no Google Play services, and TV has no push.
+test("only the phone build takes the Firebase file", () => {
+  expect(resolvedWithFirebase(false).android?.googleServicesFile).toBe(
+    "/secrets/google-services.json",
+  );
+  expect(
+    resolvedWithFirebase(true).android?.googleServicesFile,
+  ).toBeUndefined();
+});
+
+test("the TV build has a launcher banner for Android TV and Fire TV", () => {
+  const tvPlugin = resolvedPlugins(true).find(
+    (plugin) =>
+      Array.isArray(plugin) && plugin[0] === "@react-native-tvos/config-tv",
+  ) as [string, { androidTVBanner?: string }] | undefined;
+  const banner = tvPlugin?.[1]?.androidTVBanner;
+  expect(banner).toBeTruthy();
+  expect(() => readFileSync(join(__dirname, banner as string))).not.toThrow();
+});

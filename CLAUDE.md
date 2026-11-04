@@ -40,7 +40,8 @@ Read the relevant one before writing code in that area.
 Deep dives: [tv-modal-guide.md](docs/tv-modal-guide.md),
 [tv-focus-guide.md](docs/tv-focus-guide.md), [tv-discovery.md](docs/tv-discovery.md),
 [nested-modals.md](docs/nested-modals.md), [custom-headers.md](docs/custom-headers.md),
-[mac.md](docs/mac.md) (the iPad app on the Mac, why not Catalyst).
+[mac.md](docs/mac.md) (the iPad app on the Mac, why not Catalyst),
+[fire-tv.md](docs/fire-tv.md) (what the Android TV build skips on Fire OS, sideloading, the Appstore).
 
 ## Learned facts
 

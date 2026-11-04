@@ -87,16 +87,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     }
   }
 
-  // Only override googleServicesFile if env var is set
+  // Only override googleServicesFile if env var is set, and never for TV:
+  // push is off there, and Fire TV has no Google Play services, so Firebase
+  // would only add weight and a startup path that can fail.
   const androidConfig: { googleServicesFile?: string } = {};
-  if (process.env.GOOGLE_SERVICES_JSON) {
+  if (process.env.GOOGLE_SERVICES_JSON && process.env.EXPO_TV !== "1") {
     androidConfig.googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
   }
 
   config.extra = { ...config.extra, build: buildMeta };
 
+  // Merged into app.json's android block, after it: spread before `config`,
+  // the whole block from app.json replaced it and the file was dropped.
   return {
-    ...(Object.keys(androidConfig).length > 0 && { android: androidConfig }),
     ...config,
+    android: { ...config.android, ...androidConfig },
   } as ExpoConfig;
 };

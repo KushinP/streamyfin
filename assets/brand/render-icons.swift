@@ -202,8 +202,11 @@ func tv(_ name: String, _ w: Int, _ h: Int, wordmark text: Bool) {
     let ctx = makeContext(w, h); let W = CGFloat(w), H = CGFloat(h)
     darkBackground(ctx, W, H)
     if text {
-        let s = H * 0.6, gap = s * 0.1, fontSize = s * 0.5
-        let tw = NSAttributedString(string: "SuperFin", attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .heavy)]).size().width
+        var s = H * 0.6, gap = s * 0.1, fontSize = s * 0.5
+        var tw = NSAttributedString(string: "SuperFin", attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .heavy)]).size().width
+        // A narrow canvas (the 320x180 banner) shrinks the group to fit.
+        let fit = min(1, W * 0.86 / (s + gap + tw))
+        s *= fit; gap *= fit; fontSize *= fit; tw *= fit
         let x0 = (W - (s + gap + tw)) / 2
         drawGlyph(ctx, in: CGRect(x: x0, y: (H - s) / 2, width: s, height: s))
         wordmark(ctx, text: "SuperFin", x: x0 + s + gap, centerY: H / 2, size: fontSize)
@@ -219,3 +222,5 @@ tv("icon-tvos-topshelf.png", 1920, 720, wordmark: true)
 tv("icon-tvos-topshelf-2x.png", 3840, 1440, wordmark: true)
 tv("icon-tvos-topshelf-wide.png", 2320, 720, wordmark: true)
 tv("icon-tvos-topshelf-wide-2x.png", 4640, 1440, wordmark: true)
+// The Android TV and Fire TV launcher banner (xhdpi, 16:9).
+tv("tv-banner.png", 320, 180, wordmark: true)

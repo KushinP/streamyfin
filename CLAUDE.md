@@ -39,7 +39,8 @@ Read the relevant one before writing code in that area.
 
 Deep dives: [tv-modal-guide.md](docs/tv-modal-guide.md),
 [tv-focus-guide.md](docs/tv-focus-guide.md), [tv-discovery.md](docs/tv-discovery.md),
-[nested-modals.md](docs/nested-modals.md), [custom-headers.md](docs/custom-headers.md).
+[nested-modals.md](docs/nested-modals.md), [custom-headers.md](docs/custom-headers.md),
+[mac.md](docs/mac.md) (the iPad app on the Mac, why not Catalyst).
 
 ## Learned facts
 
@@ -266,6 +267,7 @@ PersistQueryClientProvider
 
 **Native modules** in `modules/`: `mpv-player` (the native player, iOS and Android),
 `exoplayer-player`, `background-downloader`, `glass-poster`, `hero-carousel`,
+`key-commands` (keyboard shortcuts on iPad and the Mac),
 `notification-settings-link` (the iOS Settings link to the Notifications screen),
 `system-volume`, `top-shelf-cache`, `tv-recommendations`, `tv-search`, `tv-user-profile`,
 `wifi-ssid`.

@@ -25,7 +25,7 @@ index 2f18f210a37062fbf044aa26dae16b8a33773382..6b48ec51f65c7e8f29b5a17d2a7e067b
             let tabData = props.items[safe: index] {
            let isFocused = props.selectedPage == tabData.key
 diff --git a/ios/TabViewImpl.swift b/ios/TabViewImpl.swift
-index 68053e1f17cbdd489f1712aac82f58e24ff4d892..5a611abb2eca702fc2929d1ca5cec467ccd5dff2 100644
+index 68053e1f17cbdd489f1712aac82f58e24ff4d892..c4501f84ebdc512d4acdfa01999c2caba9cd03b7 100644
 --- a/ios/TabViewImpl.swift
 +++ b/ios/TabViewImpl.swift
 @@ -120,14 +120,31 @@ struct TabViewImpl: View {
@@ -75,6 +75,24 @@ index 68053e1f17cbdd489f1712aac82f58e24ff4d892..5a611abb2eca702fc2929d1ca5cec467
          let itemIndex = props.items.firstIndex(where: { $0.key == tabData.key })
        else { continue }
  
+@@ -425,7 +443,16 @@ extension View {
+     if #available(iOS 18.0, macOS 15.0, tvOS 18.0, visionOS 2.0, *) {
+       if enabled {
+         #if compiler(>=6.0)
+-          self.tabViewStyle(.sidebarAdaptable)
++          #if os(iOS)
++            // SuperFin: the Mac opens on the sidebar, an iPad on the floating
++            // tab bar; both keep the toggle between them.
++            self.tabViewStyle(.sidebarAdaptable)
++              .defaultAdaptableTabBarPlacement(
++                ProcessInfo.processInfo.isiOSAppOnMac ? .sidebar : .automatic
++              )
++          #else
++            self.tabViewStyle(.sidebarAdaptable)
++          #endif
+         #else
+           self
+         #endif
 diff --git a/ios/TabViewProps.swift b/ios/TabViewProps.swift
 index dd4c3c883720d265126b9dd544c9389a3ed8cbdd..7bc129ab7aad26ee179deccfe79d15fcb003984b 100644
 --- a/ios/TabViewProps.swift

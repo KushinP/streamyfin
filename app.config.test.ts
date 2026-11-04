@@ -144,3 +144,17 @@ test("the TV build has a launcher banner for Android TV and Fire TV", () => {
   expect(banner).toBeTruthy();
   expect(() => readFileSync(join(__dirname, banner as string))).not.toThrow();
 });
+
+test("SUPERFIN_FREE_SIGNING=1 adds the free signing plugin, first", () => {
+  const previous = process.env.SUPERFIN_FREE_SIGNING;
+  try {
+    expect(resolvedPlugins(false)).not.toContain(
+      "./plugins/withFreeSigning.ts",
+    );
+    process.env.SUPERFIN_FREE_SIGNING = "1";
+    expect(resolvedPlugins(false)[0]).toBe("./plugins/withFreeSigning.ts");
+  } finally {
+    if (previous === undefined) delete process.env.SUPERFIN_FREE_SIGNING;
+    else process.env.SUPERFIN_FREE_SIGNING = previous;
+  }
+});

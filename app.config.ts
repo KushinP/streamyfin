@@ -75,6 +75,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ]);
   }
 
+  // A build a free Apple ID can sign (docs/sideloading.md). First in the list
+  // because mods run in reverse order: this one then runs last, after the
+  // plugins that add the entitlements it takes out.
+  if (process.env.SUPERFIN_FREE_SIGNING === "1") {
+    config.plugins?.unshift("./plugins/withFreeSigning.ts");
+  }
+
   // Sentry source-map/dSYM upload needs SENTRY_AUTH_TOKEN; without it the
   // injected build phases fail Release builds outright. Disable upload unless
   // the token is present (EAS secret / CI env), so it self-enables with it.

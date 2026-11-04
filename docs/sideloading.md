@@ -9,6 +9,8 @@ SuperFin is not on the App Store. For personal use there are three ways onto you
 | Mac (Apple silicon) | Xcode, **My Mac (Designed for iPad)** | Until the signing certificate expires | This Mac |
 | Fire TV, Android | The APK over `adb` | For good | ADB debugging on the device |
 
+Built files land in `build/` (gitignored): `build/SuperFin.ipa` for SideStore or AltStore, and `build/SuperFin-FireTV.apk` for Fire TV. The Fire TV APK is a release build (the app's code is inside it, no dev server needed), signed with the debug key, with both the 32-bit and 64-bit ARM code.
+
 ## The free Apple ID build
 
 A free Apple ID ("Personal Team") can't sign two of the entitlements the app normally asks for, so a sideloaded build leaves them out:

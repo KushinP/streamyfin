@@ -19,6 +19,8 @@ permissions:
 
 jobs:
   update-issue-form:
+    # Upstream only: needs streamyfin/streamyfin's secrets or acts on its tracker.
+    if: github.repository == 'streamyfin/streamyfin'
     name: 🔢 Populate version dropdown
     runs-on: ubuntu-26.04
     permissions:

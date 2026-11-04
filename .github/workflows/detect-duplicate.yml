@@ -14,7 +14,8 @@ concurrency:
 jobs:
   detect:
     name: 🔍 Find similar issues
-    if: github.actor != 'github-actions[bot]'
+    # Upstream only: needs streamyfin/streamyfin's secrets or acts on its tracker.
+    if: github.repository == 'streamyfin/streamyfin' && (github.actor != 'github-actions[bot]')
     runs-on: ubuntu-26.04
     permissions:
       issues: write

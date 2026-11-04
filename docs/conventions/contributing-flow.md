@@ -10,6 +10,8 @@ covers setup and the human side; this file is the operational checklist.
 - [Conventional Commits](https://www.conventionalcommits.org) for every commit and for
   the PR title. CI validates the title, so `fix(player): stop reporting position 0`
   passes and `fixed the player` does not.
+- Upstream Streamyfin changes reach this fork only through the `sync/upstream` PR; never
+  merge upstream into `develop` by hand. See [upstream-sync.md](upstream-sync.md).
 - One concern per PR. A drive by refactor inside a bug fix costs the reviewer the ability
   to tell which line caused what.
 

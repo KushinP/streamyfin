@@ -78,6 +78,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   // A build a free Apple ID can sign (docs/sideloading.md). First in the list
   // because mods run in reverse order: this one then runs last, after the
   // plugins that add the entitlements it takes out.
+  // Near the front for the same reason: it runs after Sentry's plugin
+  // writes the build step it fixes.
+  config.plugins?.unshift("./plugins/withSentryXcodeEnv.ts");
   if (process.env.SUPERFIN_FREE_SIGNING === "1") {
     config.plugins?.unshift("./plugins/withFreeSigning.ts");
   }

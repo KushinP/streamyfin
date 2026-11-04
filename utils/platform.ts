@@ -14,11 +14,12 @@ export const isMac = (
 ) => platform.OS === "ios" && type === DeviceType.DESKTOP;
 
 /**
- * Whether the tabs show as the iPadOS sidebar instead of a tab bar: on the
- * Mac and on an iPad, where a wide window leaves room for it. The user can
- * still collapse it back to a tab bar. Apple TV has its own focus nav bar.
+ * Whether the tabs use Apple's sidebar-adaptable style: the floating tab bar
+ * with a toggle to a sidebar. On an iPad only. The Mac draws its own sidebar
+ * (components/MacSidebar.tsx): in a Mac window Apple's one skipped the layout
+ * after the toggle, leaving an empty panel or a tab bar stuck at the edge.
  */
-export const usesSidebar = (
+export const usesNativeSidebar = (
   platform: Pick<typeof Platform, "OS"> & {
     isPad?: boolean;
     isTV?: boolean;
@@ -27,4 +28,5 @@ export const usesSidebar = (
 ) =>
   platform.OS === "ios" &&
   !platform.isTV &&
-  (platform.isPad === true || isMac(platform, type));
+  platform.isPad === true &&
+  !isMac(platform, type);

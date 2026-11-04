@@ -1,5 +1,5 @@
 import { DeviceType } from "expo-device";
-import { isMac, usesSidebar } from "./platform";
+import { isMac, usesNativeSidebar } from "./platform";
 
 describe("isMac", () => {
   test("is the iOS app on a desktop", () => {
@@ -14,19 +14,24 @@ describe("isMac", () => {
   });
 });
 
-describe("usesSidebar", () => {
-  test("the Mac and an iPad get the sidebar", () => {
-    expect(usesSidebar({ OS: "ios" }, DeviceType.DESKTOP)).toBe(true);
-    expect(usesSidebar({ OS: "ios", isPad: true }, DeviceType.TABLET)).toBe(
-      true,
-    );
+describe("usesNativeSidebar", () => {
+  test("an iPad gets Apple's sidebar toggle on its floating tab bar", () => {
+    expect(
+      usesNativeSidebar({ OS: "ios", isPad: true }, DeviceType.TABLET),
+    ).toBe(true);
   });
 
-  test("a phone, Apple TV and Android keep the tab bar", () => {
-    expect(usesSidebar({ OS: "ios" }, DeviceType.PHONE)).toBe(false);
+  test("the Mac does not: it draws its own sidebar (MacSidebar)", () => {
     expect(
-      usesSidebar({ OS: "ios", isPad: true, isTV: true }, DeviceType.TV),
+      usesNativeSidebar({ OS: "ios", isPad: true }, DeviceType.DESKTOP),
     ).toBe(false);
-    expect(usesSidebar({ OS: "android" }, DeviceType.TABLET)).toBe(false);
+  });
+
+  test("a phone, Apple TV and Android keep the plain tab bar", () => {
+    expect(usesNativeSidebar({ OS: "ios" }, DeviceType.PHONE)).toBe(false);
+    expect(
+      usesNativeSidebar({ OS: "ios", isPad: true, isTV: true }, DeviceType.TV),
+    ).toBe(false);
+    expect(usesNativeSidebar({ OS: "android" }, DeviceType.TABLET)).toBe(false);
   });
 });

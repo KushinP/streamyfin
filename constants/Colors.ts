@@ -137,6 +137,16 @@ export const HomeAmbientColors = {
   scrim: "rgba(0, 0, 0, 0.45)",
 } as const;
 
+/** The Mac's own sidebar beside the tabs (components/MacSidebar.tsx). */
+export const MacSidebarColors = {
+  background: "#0f0f0f",
+  border: "rgba(255, 255, 255, 0.08)",
+  itemActive: "rgba(255, 255, 255, 0.1)",
+  itemHovered: "rgba(255, 255, 255, 0.05)",
+  text: "#e5e5e5",
+  textMuted: "#a3a3a3",
+} as const;
+
 /** A library tile on the wide-window Library page. */
 export const LibraryTileColors = {
   background: "#171717",

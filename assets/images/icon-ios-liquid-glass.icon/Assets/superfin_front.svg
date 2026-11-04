@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6EE7B7"/><stop offset="1" stop-color="#BEF264"/></linearGradient></defs>
-  <polygon points="568,452 568,646 744,549" fill="url(#g)" stroke="url(#g)" stroke-width="28" stroke-linejoin="round"/>
+  <polygon points="574,376 574,648 816,512" fill="url(#g)" stroke="url(#g)" stroke-width="53" stroke-linejoin="round"/>
 </svg>

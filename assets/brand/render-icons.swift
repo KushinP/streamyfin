@@ -80,13 +80,15 @@ struct Pane { let box: (CGRect) -> CGRect; let from: CGColor; let to: CGColor; l
 func c(_ hex: UInt32) -> CGColor {
     CGColor(srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
 }
+// Staggered like a fast-forward button. The x offsets are shifted left so
+// the whole run, not one triangle, sits centred in the glyph box.
+func pane(_ x: CGFloat, _ size: CGFloat) -> (CGRect) -> CGRect {
+    { r in CGRect(x: r.minX + r.width * x, y: r.minY + r.height * (1 - size) / 2, width: r.width * size, height: r.height * size) }
+}
 let panes: [Pane] = [
-    Pane(box: { r in CGRect(x: r.minX, y: r.minY + r.height * 0.06, width: r.width * 0.88, height: r.height * 0.88) },
-         from: c(0x064E3B), to: c(0x059669), alpha: 1, sheen: 0.45),
-    Pane(box: { r in CGRect(x: r.minX + r.width * 0.19, y: r.minY + r.height * 0.17, width: r.width * 0.66, height: r.height * 0.66) },
-         from: c(0x10B981), to: c(0x34D399), alpha: 0.78, sheen: 0.75),
-    Pane(box: { r in CGRect(x: r.minX + r.width * 0.37, y: r.minY + r.height * 0.28, width: r.width * 0.44, height: r.height * 0.44) },
-         from: c(0x6EE7B7), to: c(0xBEF264), alpha: 0.82, sheen: 1),
+    Pane(box: pane(-0.10, 0.66), from: c(0x064E3B), to: c(0x059669), alpha: 1, sheen: 0.45),
+    Pane(box: pane(0.15, 0.60), from: c(0x10B981), to: c(0x34D399), alpha: 0.8, sheen: 0.75),
+    Pane(box: pane(0.38, 0.54), from: c(0x6EE7B7), to: c(0xBEF264), alpha: 0.85, sheen: 1),
 ]
 
 func drawGlyph(_ ctx: CGContext, in r: CGRect) {

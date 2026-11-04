@@ -41,7 +41,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon-android-plain.png",
         "monochromeImage": "./assets/images/icon-android-themed.png",
-        "backgroundColor": "#2E2E2E"
+        "backgroundColor": "#0F1A14"
       },
       "package": "com.kushagra.superfin",
       "permissions": [
@@ -163,7 +163,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification.png",
-          "color": "#9333EA"
+          "color": "#10B981"
         }
       ],
       "expo-web-browser",

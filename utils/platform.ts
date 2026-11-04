@@ -12,3 +12,21 @@ export const isMac = (
   platform: Pick<typeof Platform, "OS"> = Platform,
   type: DeviceType | null = deviceType,
 ) => platform.OS === "ios" && type === DeviceType.DESKTOP;
+
+/**
+ * Whether the tabs use Apple's sidebar-adaptable style: the floating tab bar
+ * with a toggle to a sidebar. On an iPad only. The Mac draws its own sidebar
+ * (components/MacSidebar.tsx): in a Mac window Apple's one skipped the layout
+ * after the toggle, leaving an empty panel or a tab bar stuck at the edge.
+ */
+export const usesNativeSidebar = (
+  platform: Pick<typeof Platform, "OS"> & {
+    isPad?: boolean;
+    isTV?: boolean;
+  } = Platform,
+  type: DeviceType | null = deviceType,
+) =>
+  platform.OS === "ios" &&
+  !platform.isTV &&
+  platform.isPad === true &&
+  !isMac(platform, type);

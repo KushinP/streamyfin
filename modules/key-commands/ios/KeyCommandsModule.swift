@@ -30,6 +30,17 @@ public class KeyCommandsModule: Module {
     Function("setCommands") { (commands: [KeyCommandRecord]) in
       DispatchQueue.main.async { KeyCommandHost.shared.install(commands) }
     }
+
+    // Lives here because this module already owns the app's window-level
+    // behaviour on the Mac; a module of its own for one call is not worth it.
+    Function("setMinimumWindowSize") { (width: Double, height: Double) in
+      DispatchQueue.main.async {
+        let size = CGSize(width: width, height: height)
+        for scene in UIApplication.shared.connectedScenes {
+          (scene as? UIWindowScene)?.sizeRestrictions?.minimumSize = size
+        }
+      }
+    }
   }
 }
 
@@ -43,10 +54,14 @@ final class KeyCommandHost {
   private var installed: [UIKeyCommand] = []
   private weak var owner: UIViewController?
   /// Takes first responder when nothing else holds it; see `claimIfIdle`.
-  private let host = KeyCommandHostView()
+  /// Made on first install, on the main thread: the shared host itself is
+  /// first touched from the JavaScript thread when the module loads, and
+  /// UIKit refuses a view built there.
+  private lazy var host = KeyCommandHostView()
   private var observers: [NSObjectProtocol] = []
 
-  init() {
+  private func observeIfNeeded() {
+    guard observers.isEmpty else { return }
     let center = NotificationCenter.default
     // Back to the host when the app comes forward and when a text field
     // lets go of the keyboard.
@@ -62,6 +77,8 @@ final class KeyCommandHost {
   }
 
   func install(_ commands: [KeyCommandRecord]) {
+    dispatchPrecondition(condition: .onQueue(.main))
+    observeIfNeeded()
     for command in installed { owner?.removeKeyCommand(command) }
     installed = []
     guard let root = Self.rootViewController() else { return }

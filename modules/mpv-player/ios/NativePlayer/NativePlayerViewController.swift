@@ -349,6 +349,43 @@ final class NativePlayerViewController: UIViewController {
 		#endif
 	}
 
+	#if os(iOS)
+	// MARK: Hardware keyboard (iPad and the Mac)
+
+	override var canBecomeFirstResponder: Bool { true }
+
+	override var keyCommands: [UIKeyCommand]? {
+		// The subtitle search has a text field; plain keys belong to it.
+		guard !viewModel.showSubtitleSearch else { return nil }
+		return PlayerKeyBindings.all.map { binding in
+			let command = UIKeyCommand(
+				title: binding.title,
+				action: #selector(handleKeyCommand(_:)),
+				input: binding.input,
+				modifierFlags: []
+			)
+			// Space and the arrows would otherwise scroll or move focus.
+			command.wantsPriorityOverSystemBehavior = true
+			return command
+		}
+	}
+
+	@objc private func handleKeyCommand(_ command: UIKeyCommand) {
+		guard let input = command.input, let action = PlayerKeyBindings.action(for: input)
+		else { return }
+		let volume = viewModel.volumeController
+		switch action {
+		case .playPause: viewModel.togglePlayPause()
+		case .seekBackward: viewModel.keyboardSeek(forward: false)
+		case .seekForward: viewModel.keyboardSeek(forward: true)
+		case .volumeUp: volume.setVolume(PlayerKeyBindings.stepped(volume: volume.volume, up: true))
+		case .volumeDown: volume.setVolume(PlayerKeyBindings.stepped(volume: volume.volume, up: false))
+		case .toggleMute: viewModel.toggleMute()
+		case .close: viewModel.close()
+		}
+	}
+	#endif
+
 	override func viewDidAppear(_ animated: Bool) {
 		super.viewDidAppear(animated)
 		isViewVisible = true
@@ -356,6 +393,9 @@ final class NativePlayerViewController: UIViewController {
 		UIApplication.shared.isIdleTimerDisabled = viewModel.isPlaying
 		#if os(iOS)
 		UIApplication.shared.setStatusBarHidden(!viewModel.controlsVisible, with: .none)
+		// Puts the player's keyboard shortcuts in the responder chain: in a
+		// presented player nothing else is first responder.
+		becomeFirstResponder()
 		#endif
 		#if os(tvOS)
 		// The initial zone activation ran at viewDidLoad time, before the

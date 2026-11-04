@@ -51,6 +51,8 @@ cadence meant knowing both existed, and nothing would have failed if only one ha
 | `constants/QuickConnect.ts` | Quick Connect: how long a code stays valid, the wait between two polls of it, and how long one request may take |
 | `constants/HomeAmbient.ts` | The phone's Home backdrop behind the hero: its debounce, crossfade, image size, blur and opacity |
 | `constants/LiveTv.ts` | The phone's Live TV Channels list (how many channels it asks for, how far ahead it looks for the next program, how often it refreshes now and next) and the phone's guide (its sizes, days and channel paging) |
+| `constants/Libraries.ts` | The Library page on a wide window: when it turns into a grid of tiles, the narrowest tile, the column cap and the gap |
+| `constants/Mac.ts` | The iPad app on the Mac: the smallest its window may be resized to |
 | `constants/Multiview.ts` | Multiview: the tile cap and layout ratios, toolbar and stall timings, skip lengths, how near the end counts as finished, the per tile buffer, and the picker's search and list sizes |
 | `constants/Cast.ts` | Official Jellyfin Cast receiver: its session client name, the name it gets for a TV whose own name it cannot take, how long a cast waits for the TV to start, how many times its channel is tried, and the window and waits used to tell a stopped receiver from a live one |
 

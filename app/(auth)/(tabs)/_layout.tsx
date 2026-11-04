@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import { Platform, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import { AppKeyCommands } from "@/components/AppKeyCommands";
+import { MacSidebar } from "@/components/MacSidebar";
+import { MacWindowSize } from "@/components/MacWindowSize";
 import type { TVNavBarTab } from "@/components/tv/TVNavBar";
 import { TVNavBar } from "@/components/tv/TVNavBar";
 import { Colors } from "@/constants/Colors";
@@ -25,6 +27,7 @@ import {
 } from "@/hooks/useTVBackHandler";
 import { useSettings } from "@/utils/atoms/settings";
 import { eventBus } from "@/utils/eventBus";
+import { isMac, usesNativeSidebar } from "@/utils/platform";
 
 // Music components are not available on tvOS (TrackPlayer not supported)
 const MiniPlayerBar = Platform.isTV
@@ -150,107 +153,119 @@ export default function TabLayout() {
     return <TVTabLayout />;
   }
 
+  const macSidebar = Platform.OS === "ios" && !Platform.isTV && isMac();
+
   return (
     <View style={{ flex: 1 }}>
       <SystemBars hidden={false} style='light' />
       {/* Keyboard shortcuts for iPad and the Mac; tvOS has its remote. */}
       {Platform.OS === "ios" && !Platform.isTV && <AppKeyCommands />}
-      <NativeTabs
-        sidebarAdaptable={false}
-        tabBarStyle={{
-          backgroundColor: "#121212",
-        }}
-        tabBarActiveTintColor={Platform.isTV ? "#FFFFFF" : Colors.primary}
-        activeIndicatorColor={"#392c3b"}
-        scrollEdgeAppearance='default'
-      >
-        <NativeTabs.Screen redirect name='index' />
-        <NativeTabs.Screen
-          listeners={(_e) => ({
-            tabPress: (_e) => {
-              eventBus.emit("scrollToTop");
-            },
-          })}
-          name='(home)'
-          options={{
-            title: t("tabs.home"),
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/house.fill.png")
-                : (_e) => ({ sfSymbol: "house.fill" }),
-          }}
-        />
-        <NativeTabs.Screen
-          listeners={(_e) => ({
-            tabPress: (_e) => {
-              eventBus.emit("searchTabPressed");
-            },
-          })}
-          name='(search)'
-          options={{
-            role: "search",
-            title: t("tabs.search"),
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/magnifyingglass.png")
-                : (_e) => ({ sfSymbol: "magnifyingglass" }),
-          }}
-        />
-        <NativeTabs.Screen
-          name='(favorites)'
-          options={{
-            title: t("tabs.favorites"),
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/heart.fill.png")
-                : (_e) => ({ sfSymbol: "heart.fill" }),
-          }}
-        />
-        <NativeTabs.Screen
-          name='(watchlists)'
-          options={{
-            title: t("watchlists.title"),
-            tabBarItemHidden:
-              !settings?.streamyStatsServerUrl || settings?.hideWatchlistsTab,
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/list.star.png")
-                : (_e) => ({ sfSymbol: "list.star" }),
-          }}
-        />
-        <NativeTabs.Screen
-          name='(libraries)'
-          options={{
-            title: t("tabs.library"),
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/rectangle.stack.fill.png")
-                : (_e) => ({ sfSymbol: "rectangle.stack.fill" }),
-          }}
-        />
-        <NativeTabs.Screen
-          name='(custom-links)'
-          options={{
-            title: t("tabs.custom_links"),
-            tabBarItemHidden: !settings?.showCustomMenuLinks,
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/link.png")
-                : (_e) => ({ sfSymbol: "link" }),
-          }}
-        />
-        <NativeTabs.Screen
-          name='(settings)'
-          options={{
-            title: t("tabs.settings"),
-            tabBarItemHidden: !Platform.isTV,
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/gearshape.fill.png")
-                : (_e) => ({ sfSymbol: "gearshape.fill" }),
-          }}
-        />
-      </NativeTabs>
+      {Platform.OS === "ios" && !Platform.isTV && <MacWindowSize />}
+      {/* The Mac draws its own sidebar beside the tabs, in place of the tab
+          bar; see MacSidebar. */}
+      <View style={{ flex: 1, flexDirection: "row" }}>
+        {macSidebar && <MacSidebar />}
+        <View style={{ flex: 1 }}>
+          <NativeTabs
+            sidebarAdaptable={usesNativeSidebar() && !macSidebar}
+            tabBarHidden={macSidebar}
+            tabBarStyle={{
+              backgroundColor: "#121212",
+            }}
+            tabBarActiveTintColor={Platform.isTV ? "#FFFFFF" : Colors.primary}
+            activeIndicatorColor={"#392c3b"}
+            scrollEdgeAppearance='default'
+          >
+            <NativeTabs.Screen redirect name='index' />
+            <NativeTabs.Screen
+              listeners={(_e) => ({
+                tabPress: (_e) => {
+                  eventBus.emit("scrollToTop");
+                },
+              })}
+              name='(home)'
+              options={{
+                title: t("tabs.home"),
+                tabBarIcon:
+                  Platform.OS === "android"
+                    ? (_e) => require("@/assets/icons/house.fill.png")
+                    : (_e) => ({ sfSymbol: "house.fill" }),
+              }}
+            />
+            <NativeTabs.Screen
+              listeners={(_e) => ({
+                tabPress: (_e) => {
+                  eventBus.emit("searchTabPressed");
+                },
+              })}
+              name='(search)'
+              options={{
+                role: "search",
+                title: t("tabs.search"),
+                tabBarIcon:
+                  Platform.OS === "android"
+                    ? (_e) => require("@/assets/icons/magnifyingglass.png")
+                    : (_e) => ({ sfSymbol: "magnifyingglass" }),
+              }}
+            />
+            <NativeTabs.Screen
+              name='(favorites)'
+              options={{
+                title: t("tabs.favorites"),
+                tabBarIcon:
+                  Platform.OS === "android"
+                    ? (_e) => require("@/assets/icons/heart.fill.png")
+                    : (_e) => ({ sfSymbol: "heart.fill" }),
+              }}
+            />
+            <NativeTabs.Screen
+              name='(watchlists)'
+              options={{
+                title: t("watchlists.title"),
+                tabBarItemHidden:
+                  !settings?.streamyStatsServerUrl ||
+                  settings?.hideWatchlistsTab,
+                tabBarIcon:
+                  Platform.OS === "android"
+                    ? (_e) => require("@/assets/icons/list.star.png")
+                    : (_e) => ({ sfSymbol: "list.star" }),
+              }}
+            />
+            <NativeTabs.Screen
+              name='(libraries)'
+              options={{
+                title: t("tabs.library"),
+                tabBarIcon:
+                  Platform.OS === "android"
+                    ? (_e) => require("@/assets/icons/rectangle.stack.fill.png")
+                    : (_e) => ({ sfSymbol: "rectangle.stack.fill" }),
+              }}
+            />
+            <NativeTabs.Screen
+              name='(custom-links)'
+              options={{
+                title: t("tabs.custom_links"),
+                tabBarItemHidden: !settings?.showCustomMenuLinks,
+                tabBarIcon:
+                  Platform.OS === "android"
+                    ? (_e) => require("@/assets/icons/link.png")
+                    : (_e) => ({ sfSymbol: "link" }),
+              }}
+            />
+            <NativeTabs.Screen
+              name='(settings)'
+              options={{
+                title: t("tabs.settings"),
+                tabBarItemHidden: !Platform.isTV,
+                tabBarIcon:
+                  Platform.OS === "android"
+                    ? (_e) => require("@/assets/icons/gearshape.fill.png")
+                    : (_e) => ({ sfSymbol: "gearshape.fill" }),
+              }}
+            />
+          </NativeTabs>
+        </View>
+      </View>
       <MiniPlayerBar />
       <MusicPlaybackEngine />
     </View>

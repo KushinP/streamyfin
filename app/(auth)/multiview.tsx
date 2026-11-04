@@ -25,12 +25,17 @@ import {
 import useRouter from "@/hooks/useAppRouter";
 import { useOrientation } from "@/hooks/useOrientation";
 import { useInvalidatePlaybackProgressCache } from "@/hooks/useRevalidatePlaybackProgressCache";
+import { useScreenKeyCommands } from "@/hooks/useScreenKeyCommands";
+import type { KeyCommand } from "@/modules/key-commands";
 import { OrientationLock } from "@/packages/expo-screen-orientation";
 import { isMultiviewAvailable } from "@/utils/multiview/availability";
 import {
   addTile,
+  applyMultiviewKey,
   emptyMultiview,
   isTileMuted,
+  MULTIVIEW_HEAR_KEY_PREFIX,
+  MULTIVIEW_LAYOUT_KEY,
   type MultiviewState,
   playNext,
   promoteTile,
@@ -120,6 +125,30 @@ function MultiviewScreen() {
     );
     return () => clearTimeout(timer);
   }, [toolbarVisible, pickerOpen, state, lastTouch]);
+
+  // Keys 1 to 4 hear a tile and G switches the layout, on an iPad or the
+  // Mac with a keyboard.
+  useScreenKeyCommands(
+    [
+      ...Array.from({ length: MULTIVIEW_MAX_TILES }, (_, i) => ({
+        id: `${MULTIVIEW_HEAR_KEY_PREFIX}${i + 1}`,
+        input: String(i + 1),
+        modifiers: [] as KeyCommand["modifiers"],
+        title: t("multiview.hear_tile", { number: i + 1 }),
+      })),
+      {
+        id: MULTIVIEW_LAYOUT_KEY,
+        input: "g",
+        modifiers: [],
+        title: t("multiview.change_layout"),
+      },
+    ],
+    (id) => {
+      setState((s) => applyMultiviewKey(s, id));
+      setToolbarVisible(true);
+      setLastTouch(Date.now());
+    },
+  );
 
   const onTileInteract = useCallback(() => {
     setToolbarVisible(true);

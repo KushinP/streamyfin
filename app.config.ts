@@ -70,9 +70,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "expo-camera",
       {
         cameraPermission:
-          "Allow Streamyfin to access the camera to scan QR codes for TV login.",
+          "Allow SuperFin to access the camera to scan QR codes for TV login.",
       },
     ]);
+  }
+
+  // A build a free Apple ID can sign (docs/sideloading.md). First in the list
+  // because mods run in reverse order: this one then runs last, after the
+  // plugins that add the entitlements it takes out.
+  if (process.env.SUPERFIN_FREE_SIGNING === "1") {
+    config.plugins?.unshift("./plugins/withFreeSigning.ts");
   }
 
   // Sentry source-map/dSYM upload needs SENTRY_AUTH_TOKEN; without it the
@@ -87,16 +94,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     }
   }
 
-  // Only override googleServicesFile if env var is set
+  // Only override googleServicesFile if env var is set, and never for TV:
+  // push is off there, and Fire TV has no Google Play services, so Firebase
+  // would only add weight and a startup path that can fail.
   const androidConfig: { googleServicesFile?: string } = {};
-  if (process.env.GOOGLE_SERVICES_JSON) {
+  if (process.env.GOOGLE_SERVICES_JSON && process.env.EXPO_TV !== "1") {
     androidConfig.googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
   }
 
   config.extra = { ...config.extra, build: buildMeta };
 
+  // Merged into app.json's android block, after it: spread before `config`,
+  // the whole block from app.json replaced it and the file was dropped.
   return {
-    ...(Object.keys(androidConfig).length > 0 && { android: androidConfig }),
     ...config,
+    android: { ...config.android, ...androidConfig },
   } as ExpoConfig;
 };

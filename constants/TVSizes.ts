@@ -44,6 +44,19 @@ export const TV_BACKDROP_DEBOUNCE_MS = 300;
 /** How long the TV Home backdrop takes to crossfade to the next item's art. */
 export const TV_BACKDROP_CROSSFADE_MS = 500;
 
+/** The TV Home backdrop request: full HD, high quality. */
+export const TV_BACKDROP_WIDTH = 1920;
+export const TV_BACKDROP_QUALITY = 90;
+
+/**
+ * Below this much memory (a Fire TV Stick Lite or HD has about 1 GB) the
+ * backdrop asks for a smaller, lighter image: the decoded full HD one alone
+ * is about 8 MB, and the stick swaps it out between crossfades.
+ */
+export const TV_LOW_MEMORY_BYTES = 1.5 * 1024 ** 3;
+export const TV_LOW_MEMORY_BACKDROP_WIDTH = 1280;
+export const TV_LOW_MEMORY_BACKDROP_QUALITY = 70;
+
 /**
  * Base gap/spacing values in pixels.
  */

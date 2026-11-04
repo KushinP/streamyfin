@@ -7,6 +7,7 @@ import type {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { Colors } from "@/constants/Colors";
 import type { ThemeColors } from "@/hooks/useImageColorsReturn";
 import { useSettings } from "@/utils/atoms/settings";
 import { rememberSeriesTrackFromRow } from "@/utils/seriesTrackMemory";
@@ -36,7 +37,7 @@ export const MediaSourceButton: React.FC<Props> = ({
   const [open, setOpen] = useState(false);
 
   const effectiveColors = colors || {
-    primary: "#7c3aed",
+    primary: Colors.primary,
     text: "#000000",
   };
 

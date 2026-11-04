@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Input } from "@/components/common/Input";
 import { Image } from "@/components/common/ServerImage";
 import { Text } from "@/components/common/Text";
+import { Colors } from "@/constants/Colors";
 import { useAddToPlaylist } from "@/hooks/usePlaylistMutations";
 import { useSheetOpenState } from "@/hooks/useSheetOpenState";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
@@ -192,7 +193,7 @@ export const PlaylistPickerSheet: React.FC<Props> = ({
 
         {isLoading ? (
           <View className='py-8 items-center'>
-            <ActivityIndicator color='#9334E9' />
+            <ActivityIndicator color={Colors.primary} />
           </View>
         ) : filteredPlaylists.length === 0 ? (
           <View className='py-8 items-center'>
@@ -237,7 +238,7 @@ export const PlaylistPickerSheet: React.FC<Props> = ({
                     </Text>
                   </View>
                   {addToPlaylist.isPending && (
-                    <ActivityIndicator size='small' color='#9334E9' />
+                    <ActivityIndicator size='small' color={Colors.primary} />
                   )}
                 </TouchableOpacity>
                 {index < filteredPlaylists.length - 1 && (

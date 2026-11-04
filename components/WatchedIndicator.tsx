@@ -3,6 +3,7 @@ import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import React from "react";
 import { Platform, View, type ViewStyle } from "react-native";
 import { Text } from "@/components/common/Text";
+import { Colors } from "@/constants/Colors";
 import { scaleSize } from "@/utils/scaleSize";
 
 const isAggregateType = (item: BaseItemDto) =>
@@ -27,7 +28,7 @@ const mobileBadgeBase: ViewStyle = {
   right: 4,
   height: 20,
   borderRadius: 10,
-  backgroundColor: "#9333ea",
+  backgroundColor: Colors.primary,
   alignItems: "center",
   justifyContent: "center",
 };

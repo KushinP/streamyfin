@@ -4,6 +4,8 @@
     "includes": [
       "**/*",
       "!node_modules",
+      "!.claude/worktrees",
+      "!build",
       "!ios",
       "!android",
       "!Streamyfin.app",
@@ -60,6 +62,7 @@
       "lineWidth": 80
     }
   },
+  "plugins": ["./biome-plugins/header-no-touchable-opacity.grit"],
   "overrides": [
     {
       "includes": [

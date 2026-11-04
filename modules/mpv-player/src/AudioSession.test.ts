@@ -74,18 +74,26 @@ describe("iOS audio session", () => {
     );
 
     expect(helper).toMatch(
-      /^[^\n]*\{\s*guard !isShutDown else \{ return \}\s*audioSession\.activate\(completion: completion\)\s*$/,
+      /^[^\n]*\{\s*guard !isShutDown else \{ return \}\s*audioSession\.activate\(owner: self, completion: completion\)\s*$/,
     );
   });
 
   test("PlayerAudioSession applies every request it is given", () => {
-    // Nothing to remember an earlier activation with.
-    expect(sessionSource).not.toMatch(/\bvar\b/);
+    // Nothing to remember an earlier activation with. The one stored value is
+    // who holds the session, which only the teardown reads: in multiview one
+    // tile closing must not take the session from the others still playing.
+    expect(sessionSource.match(/\bvar\b/g)).toEqual(["var"]);
+    expect(sessionSource).toMatch(
+      /private var holders = AudioSessionHolders\(\)/,
+    );
 
     const activate = section(sessionSource, "\tfunc activate(", "\n\t}\n");
 
-    // Straight onto the queue, with no way out before the session calls.
-    expect(activate).toMatch(/^[^\n]*\{\s*queue\.async \{/);
+    // Straight onto the queue, with no way out before the session calls. The
+    // holder's identifier is taken first so the engine itself never crosses.
+    expect(activate).toMatch(
+      /^[^\n]*\{\s*let id = ObjectIdentifier\(owner\)\s*queue\.async \{/,
+    );
     expect(activate).not.toMatch(/\b(guard|return)\b/);
     expect(activate).toMatch(
       /try session\.setCategory\([\s\S]*?try session\.setActive\(true\)/,

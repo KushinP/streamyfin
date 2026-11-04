@@ -7,7 +7,7 @@ import { getLibraryApi, getShowApi } from "@jellyfin/sdk/lib/utils/api";
 import { useQuery } from "@tanstack/react-query";
 import { useSegments } from "expo-router";
 import { useAtomValue } from "jotai";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useWindowDimensions } from "react-native";
 import useRouter from "@/hooks/useAppRouter";
@@ -300,7 +300,15 @@ const buildBadges = (item: BaseItemDto): string[] => {
  * recently-added together. Anything still short after that (dedup, a thin
  * library) is backfilled from the buckets that have candidates to spare.
  */
-export const HomeHeroCarousel = () => {
+export const HomeHeroCarousel = ({
+  onActiveItemChange,
+}: {
+  /**
+   * The item on the slide now showing, or null with no slides; the Home
+   * backdrop follows it.
+   */
+  onActiveItemChange?: (item: BaseItemDto | null) => void;
+} = {}) => {
   const api = useAtomValue(apiAtom);
   const user = useAtomValue(userAtom);
   const router = useRouter();
@@ -640,6 +648,22 @@ export const HomeHeroCarousel = () => {
     [hiddenSections, hiddenMediaTypes, updateSettings, lightHapticFeedback],
   );
 
+  const handleActiveItemChange = useCallback(
+    (event: { nativeEvent: HeroCarouselItemPressEvent }) => {
+      const entry = entries?.find(
+        ({ item }) => item.Id === event.nativeEvent.id,
+      );
+      onActiveItemChange?.(entry?.item ?? null);
+    },
+    [entries, onActiveItemChange],
+  );
+
+  // Filtered down to nothing, or switched off: no slide, so no backdrop.
+  const hasItems = items.length > 0;
+  useEffect(() => {
+    if (!hasItems || !showHeroCarousel) onActiveItemChange?.(null);
+  }, [hasItems, showHeroCarousel, onActiveItemChange]);
+
   const handleItemPress = useCallback(
     (event: { nativeEvent: HeroCarouselItemPressEvent }) => {
       const entry = entries?.find(
@@ -667,6 +691,7 @@ export const HomeHeroCarousel = () => {
       filterLabel={t("home.hero.filter")}
       onItemPress={handleItemPress}
       onFilterToggle={handleFilterToggle}
+      onActiveItemChange={handleActiveItemChange}
       style={{
         width: "100%",
         height: metrics.cardHeight + DOTS_AREA,

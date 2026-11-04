@@ -25,6 +25,7 @@ internal object TvRecommendationsPublisher {
   private const val KEY_CHANNEL_ID_PREFIX = "channelId_"
   private const val KEY_PROGRAM_IDS = "programIds"
   private const val DEFAULT_CHANNEL_NAME = "Continue and Next Up"
+  private const val FIRE_TV_FEATURE = "amazon.hardware.fire_tv"
 
   fun sync(context: Context, payloadJson: String): Boolean {
     val payload = try {
@@ -186,7 +187,19 @@ internal object TvRecommendationsPublisher {
     }
   }
 
+  /**
+   * Fire TV's launcher does not show Android TV preview channels, and Fire OS
+   * has no Google services behind them, so the provider writes would only be
+   * wasted work there. Amazon declares this feature on every Fire TV device.
+   */
+  private fun isFireTv(context: Context): Boolean =
+    context.packageManager.hasSystemFeature(FIRE_TV_FEATURE)
+
   private fun synchronize(context: Context, payload: JSONObject): Boolean {
+    if (isFireTv(context)) {
+      Log.d(TAG, "synchronize(): skipped on Fire TV")
+      return false
+    }
     val sections = payload.optJSONArray("sections") ?: JSONArray()
     if (sections.length() == 0) {
       Log.w(TAG, "synchronize(): no sections in payload")
@@ -344,7 +357,8 @@ internal object TvRecommendationsPublisher {
         val updated = Channel.Builder()
           .setType(TvContractCompat.Channels.TYPE_PREVIEW)
           .setDisplayName(displayName)
-          .setAppLinkIntentUri(buildIntentUri(context, "streamyfin://"))
+          // The app's own scheme: APP_SCHEME in constants/AppScheme.ts.
+          .setAppLinkIntentUri(buildIntentUri(context, "superfin://"))
           .build()
 
         try {
@@ -380,7 +394,8 @@ internal object TvRecommendationsPublisher {
     val channel = Channel.Builder()
       .setType(TvContractCompat.Channels.TYPE_PREVIEW)
       .setDisplayName(displayName)
-      .setAppLinkIntentUri(buildIntentUri(context, "streamyfin://"))
+      // The app's own scheme: APP_SCHEME in constants/AppScheme.ts.
+      .setAppLinkIntentUri(buildIntentUri(context, "superfin://"))
       .build()
 
     val channelUri = try {

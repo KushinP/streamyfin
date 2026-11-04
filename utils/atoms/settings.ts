@@ -504,6 +504,11 @@ export type Settings = {
   hideBrightnessSlider: boolean;
   usePopularPlugin: boolean;
   mergeNextUpAndContinueWatching: boolean;
+  /**
+   * Movie and show pages take a dark tint from their artwork instead of a
+   * flat black. On by default; the phone's Appearance settings turn it off.
+   */
+  ambientBackgrounds: boolean;
   /** Home row of episodes about to air, from every TV library. Off by default. */
   showUpcomingOnHome: boolean;
   /**
@@ -700,6 +705,7 @@ export const defaultValues: Settings = {
   hideBrightnessSlider: false,
   usePopularPlugin: true,
   mergeNextUpAndContinueWatching: false,
+  ambientBackgrounds: true,
   showUpcomingOnHome: false,
   hiddenHomeHeroSections: [],
   hiddenHomeHeroMediaTypes: [],

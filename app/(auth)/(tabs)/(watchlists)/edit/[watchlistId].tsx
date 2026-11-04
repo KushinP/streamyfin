@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { Text } from "@/components/common/Text";
+import { Colors } from "@/constants/Colors";
 import useRouter from "@/hooks/useAppRouter";
 import { useDismissKeyboardOnLeave } from "@/hooks/useDismissKeyboardOnLeave";
 import { useUpdateWatchlist } from "@/hooks/useWatchlistMutations";
@@ -194,7 +195,7 @@ export default function EditWatchlistScreen() {
           <Switch
             value={isPublic}
             onValueChange={setIsPublic}
-            trackColor={{ false: "#374151", true: "#7c3aed" }}
+            trackColor={{ false: "#374151", true: Colors.primary }}
             thumbColor={isPublic ? "#a78bfa" : "#9ca3af"}
           />
         </View>

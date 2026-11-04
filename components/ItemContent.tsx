@@ -36,6 +36,7 @@ import * as ScreenOrientation from "@/packages/expo-screen-orientation";
 import { useDownload } from "@/providers/DownloadProvider";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
 import { useOfflineMode } from "@/providers/OfflineModeProvider";
+import { ambientTint } from "@/utils/ambientTint";
 import { useSettings } from "@/utils/atoms/settings";
 import { getLogoImageUrlById } from "@/utils/jellyfin/image/getLogoImageUrlById";
 import { toImagePixels } from "@/utils/jellyfin/image/imagePixels";
@@ -252,6 +253,9 @@ const ItemContentMobile: React.FC<ItemContentProps> = ({
       <ParallaxScrollView
         className='flex-1'
         headerHeight={headerHeight}
+        ambientColor={
+          settings.ambientBackgrounds ? ambientTint(itemColors.primary) : null
+        }
         headerImage={
           <View style={[{ flex: 1 }]}>
             <ItemImage

@@ -122,10 +122,10 @@
       "disable": "Disable hero"
     },
     "intro": {
-      "welcome_to_streamyfin": "Welcome to Streamyfin",
+      "welcome_to_streamyfin": "Welcome to SuperFin",
       "a_free_and_open_source_client_for_jellyfin": "A free and open-source client for Jellyfin.",
       "features_title": "Features",
-      "features_description": "Streamyfin has a bunch of features and works with other software. You'll find them in the settings menu:",
+      "features_description": "SuperFin has a bunch of features and works with other software. You'll find them in the settings menu:",
       "seerr_feature_description": "Connect to your Seerr instance and request movies directly in the app.",
       "downloads_feature_title": "Downloads",
       "downloads_feature_description": "Download movies and series to watch offline.",
@@ -135,8 +135,8 @@
       "done_button": "Done",
       "go_to_settings_button": "Go to Settings",
       "read_more": "Read more",
-      "crash_reports_title": "Help improve Streamyfin",
-      "crash_reports_description": "Streamyfin sends anonymous crash and error reports to the developers. No account data or server addresses are included. You can turn this off here or anytime in settings."
+      "crash_reports_title": "Help improve SuperFin",
+      "crash_reports_description": "SuperFin sends anonymous crash and error reports to the developers. No account data or server addresses are included. You can turn this off here or anytime in settings."
     },
     "settings": {
       "settings_title": "Settings",
@@ -161,6 +161,8 @@
         "title": "Appearance",
         "download_live_activity": "Live Activity",
         "download_live_activity_hint": "Show download progress on the Lock Screen and in the Dynamic Island.",
+        "ambient_backgrounds": "Ambient backgrounds",
+        "ambient_backgrounds_hint": "Tint movie and show pages with the colours of their artwork.",
         "merge_next_up_continue_watching": "Merge Continue watching & Next up",
         "merge_next_up_continue_watching_hint": "Combine Continue Watching and Next Up into a single home row.",
         "show_upcoming_on_home": "Upcoming episodes on home",
@@ -446,7 +448,7 @@
         "opensubtitles_enabled": "Search OpenSubtitles",
         "opensubtitles_enabled_hint": "Let this device search OpenSubtitles directly when your Jellyfin server has no subtitle provider. Turning this off keeps subtitle searches on your server and leaves any saved API key alone.",
         "crash_reports": "Crash reports",
-        "crash_reports_hint": "Send anonymous crash and error reports to the Streamyfin developers via Sentry. Reports contain no account data; server addresses and tokens are removed before anything is sent.",
+        "crash_reports_hint": "Send anonymous crash and error reports to the SuperFin developers via Sentry. Reports contain no account data; server addresses and tokens are removed before anything is sent.",
         "seerr": {
           "server_url": "Server URL",
           "server_url_hint": "Example: http(s)://your-host.url\n(add port if required)",
@@ -639,7 +641,7 @@
           "until": "Until {{when}}"
         },
         "blocked": {
-          "title": "Notifications are off for Streamyfin",
+          "title": "Notifications are off for SuperFin",
           "body": "Your phone blocks them, whatever you choose below.",
           "open": "Open Settings"
         },
@@ -890,7 +892,7 @@
     "still_watching": "Are you still watching?",
     "error": "Error",
     "failed_to_get_stream_url": "Failed to get the stream URL",
-    "unsupported_item_type": "Streamyfin can't play this type of item",
+    "unsupported_item_type": "SuperFin can't play this type of item",
     "an_error_occurred_while_playing_the_video": "An error occurred while playing the video. Check logs in settings.",
     "client_error": "Client error",
     "could_not_create_stream_for_chromecast": "Could not create a stream for Chromecast",
@@ -1067,6 +1069,10 @@
     "page_of": "Page {{current}} of {{total}}",
     "no_programs": "No programs available",
     "no_channels": "No channels available",
+    "next_at": "Next {{time}} · {{title}}",
+    "filter_all": "All",
+    "filter_favorites": "Favorites",
+    "today": "Today",
     "tabs": {
       "programs": "Programs",
       "guide": "Guide",
@@ -1361,7 +1367,7 @@
     "pairing_tv_connecting": "The TV is connecting to your account",
     "error_title": "Authorization failed",
     "error_invalid_qr": "Invalid QR code. Please scan the TV pairing code.",
-    "error_old_tv": "This TV runs an older version of Streamyfin. Update it, then try again.",
+    "error_old_tv": "This TV runs an older version of SuperFin. Update it, then try again.",
     "error_code_not_waiting": "This code is not waiting on {{server}}. Check that the TV uses the same server as this phone, then start Quick Connect again on the TV.",
     "error_quick_connect_disabled": "Quick Connect is turned off on {{server}}. An administrator can turn it on in the server's dashboard.",
     "error_other_server": "This TV is connecting to another server, {{server}}. Sign in to that server in this app, then scan again.",
@@ -1374,10 +1380,10 @@
   "pairing": {
     "pair_with_phone": "Pair with phone",
     "pair_with_phone_title": "Log in on TV",
-    "scan_quick_connect": "Scan the QR code with the Streamyfin app or your phone's camera.",
+    "scan_quick_connect": "Scan the QR code with the SuperFin app or your phone's camera.",
     "code_expired": "This code has expired.",
     "get_new_code": "Get a new code",
-    "scan_with_app": "Scan the QR code with the Streamyfin app on your phone.",
+    "scan_with_app": "Scan the QR code with the SuperFin app on your phone.",
     "account_that_approves": "The account that approves the code",
     "logging_in": "Logging in...",
     "logging_in_description": "Connecting to your server"
@@ -1487,5 +1493,39 @@
     "play_now": "Play now",
     "refresh_group": "Refresh group",
     "close": "Close"
+  },
+  "multiview": {
+    "open": "Open multiview",
+    "chip": "Multiview",
+    "add_tile": "Add to multiview",
+    "tab_media": "Media",
+    "search_channels": "Search channels",
+    "search_media": "Search movies and episodes",
+    "no_matches": "Nothing matches “{{query}}”",
+    "nothing_in_progress": "You're not part way through anything. Search to find something to watch.",
+    "change_layout": "Change layout",
+    "audio_all": "Play sound from every tile",
+    "audio_one": "Play sound from one tile",
+    "close": "Close multiview",
+    "close_picker": "Close",
+    "make_main": "Make this the main tile",
+    "remove_tile": "Remove this tile",
+    "tile_starting": "Starting stream",
+    "tile_failed": "This stream couldn't be opened. If it's a live channel, every tuner may be in use.",
+    "tile_hint": "Tap to hear this tile, press and hold for more options",
+    "play": "Play",
+    "pause": "Pause",
+    "seek_back": "Back {{seconds}} seconds",
+    "seek_forward": "Forward {{seconds}} seconds",
+    "captions": "Captions",
+    "captions_off": "Off",
+    "captions_track": "Track {{number}}",
+    "no_captions": "This one has no captions",
+    "finished": "Finished",
+    "play_next": "Play next: {{name}}",
+    "play_again": "Play again",
+    "on_screen": "On screen",
+    "continue_watching": "Continue watching",
+    "empty": "Add a channel or a show to start watching"
   }
 }

@@ -1,5 +1,6 @@
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View, type ViewProps } from "react-native";
+import { Colors } from "@/constants/Colors";
 import { useScaledTVTypography } from "@/constants/TVTypography";
 import { GlassSurface } from "./common/GlassSurface";
 import { Text } from "./common/Text";
@@ -93,7 +94,7 @@ export const Badge: React.FC<Props> = ({
           alignSelf: "flex-start",
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: variant === "purple" ? "#9333ea" : "#262626",
+          backgroundColor: variant === "purple" ? Colors.primary : "#262626",
         },
         props.style,
       ]}

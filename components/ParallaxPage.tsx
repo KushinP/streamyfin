@@ -46,7 +46,16 @@ interface Props extends ViewProps {
   episodePoster?: ReactElement;
   headerHeight?: number;
   onEndReached?: (() => void) | null | undefined;
+  /**
+   * A dark tint from the artwork (utils/ambientTint). The header fades into
+   * it and the page eases from it down to black. Without one, the page is
+   * black as before.
+   */
+  ambientColor?: string | null;
 }
+
+/** How far down the page the ambient tint takes to reach black. */
+const AMBIENT_FADE_HEIGHT = 700;
 
 export const ParallaxScrollView: React.FC<PropsWithChildren<Props>> = ({
   children,
@@ -55,8 +64,10 @@ export const ParallaxScrollView: React.FC<PropsWithChildren<Props>> = ({
   headerHeight = PARALLAX_HEADER_HEIGHT,
   logo,
   onEndReached,
+  ambientColor,
   ...props
 }: Props) => {
+  const pageColor = ambientColor ?? ParallaxPageColors.background;
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const originRef = useAnimatedRef<Animated.View>();
   const scrollOffset = useScrollViewOffset(scrollRef);
@@ -144,7 +155,7 @@ export const ParallaxScrollView: React.FC<PropsWithChildren<Props>> = ({
         >
           <LinearGradient
             // Background Linear Gradient
-            colors={["transparent", "rgba(0,0,0,1)"]}
+            colors={[ParallaxPageColors.clear, pageColor]}
             style={{
               position: "absolute",
               left: 0,
@@ -164,6 +175,18 @@ export const ParallaxScrollView: React.FC<PropsWithChildren<Props>> = ({
               backgroundColor: ParallaxPageColors.background,
             }}
           />
+          {ambientColor && (
+            <LinearGradient
+              colors={[ambientColor, ParallaxPageColors.background]}
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 50,
+                height: AMBIENT_FADE_HEIGHT,
+              }}
+            />
+          )}
           <ParallaxScrollContext.Provider value={scroll}>
             {children}
           </ParallaxScrollContext.Provider>

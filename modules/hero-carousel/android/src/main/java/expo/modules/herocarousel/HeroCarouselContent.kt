@@ -54,6 +54,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -147,7 +149,9 @@ private val HairlineColor = Color.White.copy(alpha = 0.15f)
 internal fun HeroCarouselRoot(
   payload: HeroPayload,
   onItemPress: (String) -> Unit,
-  onFilterToggle: (String) -> Unit
+  onFilterToggle: (String) -> Unit,
+  /** The page now showing, by item id; the JS side tints Home with it. */
+  onActiveItemChange: (String) -> Unit
 ) {
   // The app is dark themed; force a dark scheme so the filter menu renders
   // dark regardless of the system setting (iOS forces `colorScheme` too).
@@ -161,7 +165,8 @@ internal fun HeroCarouselRoot(
         HeroPager(
           items = payload.items,
           headers = payload.imageHeaders,
-          onItemPress = onItemPress
+          onItemPress = onItemPress,
+          onActiveItemChange = onActiveItemChange
         )
       }
 
@@ -203,7 +208,8 @@ private val HeroColorScheme = darkColorScheme(
 private fun HeroPager(
   items: List<HeroItem>,
   headers: Map<String, String>,
-  onItemPress: (String) -> Unit
+  onItemPress: (String) -> Unit,
+  onActiveItemChange: (String) -> Unit
 ) {
   val count = items.size
   val pagerState = rememberPagerState(initialPage = infiniteStartPage(count)) {
@@ -213,6 +219,21 @@ private fun HeroPager(
   // index means a different item now, so go back to the start. Same count is
   // left alone — a refresh that returns the same slides keeps the position.
   LaunchedEffect(count) { pagerState.scrollToPage(infiniteStartPage(count)) }
+  // `settledPage`, not `currentPage`: the backdrop changes once a swipe has
+  // landed, not each time a drag crosses the halfway point.
+  val latestItems by rememberUpdatedState(items)
+  // The items are read inside the snapshot too, so a refetch that swaps the
+  // slides under the same page (same count, new first item) reports again;
+  // distinctUntilChanged keeps a recomposition on the same slide quiet.
+  LaunchedEffect(pagerState) {
+    snapshotFlow {
+      val current = latestItems
+      if (current.isEmpty()) null
+      else current[Math.floorMod(pagerState.settledPage, current.size)].id
+    }
+      .distinctUntilChanged()
+      .collect { id -> if (id != null) onActiveItemChange(id) }
+  }
 
   val scope = rememberCoroutineScope()
   var scrollJob by remember { mutableStateOf<Job?>(null) }

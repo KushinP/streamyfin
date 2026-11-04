@@ -103,6 +103,13 @@ public class MpvPlayerModule: Module {
           demuxerMaxBackBytes: self.parseInteger(cacheConfig?["maxBackBytes"])
         )
 
+        // Applied before the load: the renderer keeps the flag and sets it on
+        // the fresh mpv instance, so an autoplaying source never makes a
+        // sound it was meant not to. A mute sent from JS afterwards arrives
+        // only once playback has begun.
+        if let muted = source["muted"] as? Bool {
+          view.setMute(muted: muted)
+        }
         view.loadVideo(config: config)
       }
 

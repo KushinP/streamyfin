@@ -40,6 +40,7 @@ class HeroCarouselExpoView(context: Context, appContext: AppContext) :
 
   private val onItemPress by EventDispatcher()
   private val onFilterToggle by EventDispatcher()
+  private val onActiveItemChange by EventDispatcher()
 
   private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
   private var downX = 0f
@@ -70,7 +71,10 @@ class HeroCarouselExpoView(context: Context, appContext: AppContext) :
       HeroCarouselRoot(
         payload = payload.value,
         onItemPress = { id -> onItemPress(mapOf("id" to id)) },
-        onFilterToggle = { key -> onFilterToggle(mapOf("key" to key)) }
+        onFilterToggle = { key -> onFilterToggle(mapOf("key" to key)) },
+        // Not de-duplicated, as on iOS: the same slide coming back after JS
+        // reset its item has to be reported again.
+        onActiveItemChange = { id -> onActiveItemChange(mapOf("id" to id)) }
       )
     }
   }

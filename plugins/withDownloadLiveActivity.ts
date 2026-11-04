@@ -24,7 +24,7 @@ interface AppExtensionConfig {
 }
 
 function getBundleIdentifier(config: ExpoConfig): string {
-  return config.ios?.bundleIdentifier || "com.fredrikburmester.streamyfin";
+  return config.ios?.bundleIdentifier || "com.kushagra.superfin";
 }
 
 function getAppGroupIdentifier(config: ExpoConfig): string {
@@ -217,6 +217,11 @@ const withDownloadLiveActivity: ConfigPlugin = (config) => {
         SKIP_INSTALL: "YES",
         SWIFT_VERSION: "5.9",
         DOWNLOADS_APP_GROUP_IDENTIFIER: appGroupIdentifier,
+        // The app target gets the team from app.json; without it here too,
+        // Xcode can't sign the extension ("requires a development team").
+        ...(config.ios?.appleTeamId && {
+          DEVELOPMENT_TEAM: config.ios.appleTeamId,
+        }),
         SUPPORTED_PLATFORMS: '"iphoneos iphonesimulator"',
         TARGETED_DEVICE_FAMILY: '"1,2"',
       };

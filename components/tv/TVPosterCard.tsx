@@ -270,7 +270,7 @@ const TVPosterCardComponent: React.FC<TVPosterCardProps> = ({
     onBlurProp?.(item);
   }, [animateTo, onBlurProp, item, useGlass]);
 
-  const shadowColor = glowColor === "white" ? "#ffffff" : "#a855f7";
+  const shadowColor = glowColor === "white" ? "#ffffff" : Colors.primary;
 
   // Text rendering helpers
   const renderSubtitle = () => {

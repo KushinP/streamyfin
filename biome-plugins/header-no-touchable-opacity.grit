@@ -1,0 +1,12 @@
+language js
+
+or {
+  `headerLeft: $render`,
+  `headerRight: $render`
+} where {
+  $render <: contains or {
+    `<TouchableOpacity $_>$_</TouchableOpacity>`,
+    `<TouchableOpacity $_ />`
+  } as $button,
+  register_diagnostic(span=$button, message="A TouchableOpacity in a navigation header takes no clicks on the Mac. Use Pressable from react-native-gesture-handler, as RoundButton and HeaderBackButton do.", severity="error")
+}

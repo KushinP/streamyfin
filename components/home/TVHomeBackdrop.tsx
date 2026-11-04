@@ -18,6 +18,7 @@ import {
 } from "@/constants/TVSizes";
 import { apiAtom } from "@/providers/JellyfinProvider";
 import { getBackdropUrl } from "@/utils/jellyfin/image/getBackdropUrl";
+import { tvBackdropRequest } from "@/utils/tvBackdropRequest";
 
 export interface TVHomeBackdropRef {
   handleItemFocus: (item: BaseItemDto) => void;
@@ -69,8 +70,7 @@ export const TVHomeBackdrop = React.memo(
       return getBackdropUrl({
         api,
         item: focusedItem,
-        quality: 90,
-        width: 1920,
+        ...tvBackdropRequest(),
       });
     }, [api, focusedItem]);
 

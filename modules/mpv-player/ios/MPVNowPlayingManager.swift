@@ -24,7 +24,19 @@ class MPVNowPlayingManager {
     
     // MARK: - Remote Commands
     
+    /// The engine whose handlers the remote commands call. Multiview runs
+    /// several engines at once; the first to set the commands up owns them
+    /// and the lock screen, and only it may clear them, so one tile closing
+    /// does not take the controls away from the one they drive.
+    private var owner: ObjectIdentifier?
+
+    /// Whether `engine` may write Now Playing: it owns it, or nobody does.
+    func speaks(for engine: AnyObject) -> Bool {
+        owner == nil || owner == ObjectIdentifier(engine)
+    }
+
     func setupRemoteCommands(
+        owner engine: AnyObject,
         playHandler: @escaping () -> Void,
         pauseHandler: @escaping () -> Void,
         toggleHandler: @escaping () -> Void,
@@ -34,6 +46,7 @@ class MPVNowPlayingManager {
     ) {
         guard !isCommandsSetup else { return }
         isCommandsSetup = true
+        owner = ObjectIdentifier(engine)
         
         DispatchQueue.main.async {
             UIApplication.shared.beginReceivingRemoteControlEvents()
@@ -73,8 +86,16 @@ class MPVNowPlayingManager {
         print("[NowPlaying] Remote commands ready")
     }
     
-    func cleanupRemoteCommands() {
-        guard isCommandsSetup else { return }
+    /// Posted on main once the owning engine has let the remote commands go,
+    /// so another engine still playing (a multiview tile) can take them over.
+    static let releasedNotification = Notification.Name("MPVNowPlayingReleased")
+
+    func cleanupRemoteCommands(owner engine: AnyObject) {
+        guard isCommandsSetup, owner == ObjectIdentifier(engine) else { return }
+        owner = nil
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: Self.releasedNotification, object: nil)
+        }
         
         let cc = MPRemoteCommandCenter.shared()
         cc.playCommand.removeTarget(nil)

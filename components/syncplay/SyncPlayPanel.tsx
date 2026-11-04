@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { Text } from "@/components/common/Text";
+import { Colors } from "@/constants/Colors";
 import type { SyncPlayGroup } from "@/providers/SyncPlayProvider";
 import type { SyncPlaySeed } from "@/utils/syncplay/types";
 import { SyncPlayOptions, SyncPlayPlayback } from "./SyncPlayControls";
@@ -18,7 +19,7 @@ interface Props {
   onQueueDragChange?: (dragging: boolean) => void;
 }
 
-const PLAYING = "#c084fc";
+const PLAYING = Colors.primaryLight;
 const SECONDARY = "#9899A1";
 
 /**

@@ -30,7 +30,7 @@ jest.mock("expo-linking", () => ({
 // system media controls are tapped: react-native-track-player's MusicService.
 const MUSIC_NOTIFICATION_LINK = "trackplayer://notification.click";
 const TOP_SHELF_LINK =
-  "streamyfin://topshelf/item?id=f137a2dd21bbc1b99aa5c0f6bf02a805";
+  "superfin://topshelf/item?id=f137a2dd21bbc1b99aa5c0f6bf02a805";
 
 const APP_DIR = path.join(__dirname, "..", "app");
 // What a native bundle takes routes from (expo-router/_ctx.ios.js).

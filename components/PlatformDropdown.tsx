@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/common/Text";
+import { Colors } from "@/constants/Colors";
 import { useGlobalModal } from "@/providers/GlobalModalProvider";
 
 // @expo/ui's SwiftUI native module (ExpoUI) does not exist in tvOS builds.
@@ -99,7 +100,7 @@ const OptionItem: React.FC<{ option: Option; isLast?: boolean }> = ({
         {isToggle ? (
           <ToggleSwitch value={option.value} />
         ) : isAction ? null : (option as RadioOption).selected ? (
-          <Ionicons name='checkmark-circle' size={24} color='#9333ea' />
+          <Ionicons name='checkmark-circle' size={24} color={Colors.primary} />
         ) : (
           <Ionicons name='ellipse-outline' size={24} color='#6b7280' />
         )}

@@ -64,6 +64,13 @@ export type HeroCarouselViewProps = {
   /** Pre-localized accessibility label for the filter button. */
   filterLabel?: string;
   onItemPress?: (event: { nativeEvent: HeroCarouselItemPressEvent }) => void;
+  /**
+   * Fires with the id of the slide now showing: on first layout, and each
+   * time a swipe settles on another one.
+   */
+  onActiveItemChange?: (event: {
+    nativeEvent: HeroCarouselItemPressEvent;
+  }) => void;
   /** Fires with the toggled row's `key`; the caller owns the new state. */
   onFilterToggle?: (event: {
     nativeEvent: HeroCarouselFilterToggleEvent;

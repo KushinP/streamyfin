@@ -23,12 +23,24 @@ final class PlayerAudioSession {
 
 	private let queue = DispatchQueue(label: "streamyfin.player.audio-session", qos: .userInitiated)
 
+	/// The engines that have the session, touched only on `queue`. Several play
+	/// at once in multiview, and one tile closing must not take the session,
+	/// and the playback category, from the others still playing. It also keeps
+	/// a host's deferred teardown from undoing a newer engine's activation.
+	private var holders = AudioSessionHolders()
+
 	private init() {}
 
-	/// Applies the playback category and activates the session. `completion`
-	/// runs on the main thread afterwards, whether or not the session took it.
-	func activate(completion: (() -> Void)? = nil) {
+	/// Applies the playback category and activates the session for `owner`.
+	/// `completion` runs on the main thread afterwards, whether or not the
+	/// session took it.
+	func activate(owner: AnyObject, completion: (() -> Void)? = nil) {
+		// Only the identifier crosses to the queue: capturing the engine would
+		// let its last reference, and so its deinit and teardown, land here,
+		// off the main thread.
+		let id = ObjectIdentifier(owner)
 		queue.async {
+			self.holders.take(id)
 			let session = AVAudioSession.sharedInstance()
 			do {
 				try session.setCategory(.playback, mode: .moviePlayback, policy: .longFormAudio, options: [])
@@ -45,8 +57,12 @@ final class PlayerAudioSession {
 	/// Deactivate the session AND reset the category — `setActive(false)` alone
 	/// leaves `.playback`/`.longFormAudio` on the shared singleton, so any later
 	/// reactivation (foreground, route change, other modules) re-steals audio.
-	func tearDown() {
+	///
+	/// Only once the last engine holding the session lets it go.
+	func tearDown(owner: AnyObject) {
+		let id = ObjectIdentifier(owner)
 		queue.async {
+			guard self.holders.release(id) else { return }
 			let session = AVAudioSession.sharedInstance()
 			try? session.setActive(false, options: .notifyOthersOnDeactivation)
 			try? session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])

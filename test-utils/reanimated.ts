@@ -120,6 +120,10 @@ export const reanimatedModule = {
   useSharedValue: <Value>(initial: Value) =>
     useRef(makeSharedValue(initial)).current,
   useAnimatedStyle: (updater: () => object) => updater(),
+  // The worklet gets the native event's payload, as the real handler does.
+  useAnimatedScrollHandler:
+    (handler: (event: unknown) => void) => (event: { nativeEvent?: unknown }) =>
+      handler(event.nativeEvent ?? event),
   withTiming: (toValue: unknown) => toValue,
   withDelay: (_delay: unknown, animation: unknown) => animation,
   withRepeat: (animation: unknown) => animation,

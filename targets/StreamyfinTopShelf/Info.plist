@@ -14,7 +14,7 @@
     <true/>
   </dict>
     <key>CFBundleDisplayName</key>
-    <string>Streamyfin Top Shelf</string>
+    <string>SuperFin Top Shelf</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>

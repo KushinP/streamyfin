@@ -75,6 +75,26 @@ export const removeTile = (
   return { ...state, tiles, audio };
 };
 
+/**
+ * Plays another item in a tile's place, as the next episode does when one
+ * ends. The tile keeps its spot and its sound. Refuses an item already on
+ * screen, for the same reason as {@link addTile}.
+ */
+export const replaceTile = (
+  state: MultiviewState,
+  key: string,
+  itemId: string,
+): MultiviewState => {
+  if (!state.tiles.some((tile) => tile.key === key)) return state;
+  if (state.tiles.some((tile) => tile.itemId === itemId)) return state;
+  return {
+    ...state,
+    tiles: state.tiles.map((tile) =>
+      tile.key === key ? { ...tile, itemId } : tile,
+    ),
+  };
+};
+
 /** Makes a tile the only one heard. */
 export const selectAudio = (
   state: MultiviewState,

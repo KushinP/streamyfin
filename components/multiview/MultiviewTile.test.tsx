@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { QueryWrapper } from "@/test-utils/queryWrapper";
 
 type Handler<T> = (e: { nativeEvent: T }) => void;
-let mockOnProgress: Handler<{ position: number }> | undefined;
+let mockOnProgress:
+  | Handler<{ position: number; duration?: number }>
+  | undefined;
+const mockGetEpisodes = jest.fn();
 let mockOnState:
   | Handler<{ isPaused?: boolean; isLoading?: boolean }>
   | undefined;
@@ -10,6 +14,7 @@ const mockPlayer = {
   play: jest.fn(() => Promise.resolve()),
   pause: jest.fn(() => Promise.resolve()),
   seekBy: jest.fn((_s: number) => Promise.resolve()),
+  seekTo: jest.fn((_s: number) => Promise.resolve()),
   setMute: jest.fn(() => Promise.resolve()),
   destroy: jest.fn(() => Promise.resolve()),
   // MPV numbers the file's own track first, then the files loaded with it.
@@ -84,7 +89,13 @@ jest.mock("jotai", () => ({
   ...jest.requireActual("jotai"),
   useAtomValue: () => ({ basePath: "https://jf.example.com" }),
 }));
-jest.mock("@/utils/atoms/api", () => ({ apiAtom: "apiAtom" }));
+jest.mock("@/utils/atoms/api", () => ({
+  apiAtom: "apiAtom",
+  userAtom: "userAtom",
+}));
+jest.mock("@jellyfin/sdk/lib/utils/api", () => ({
+  getShowApi: () => ({ getEpisodes: mockGetEpisodes }),
+}));
 jest.mock("@/modules", () => {
   const { forwardRef, useImperativeHandle } = jest.requireActual("react");
   const { View } = jest.requireActual("react-native");
@@ -108,21 +119,30 @@ jest.mock("@/modules", () => {
 
 import { MultiviewTile } from "./MultiviewTile";
 
+const onPlayNext = jest.fn();
+const onRemove = jest.fn();
+
 const renderTile = (showLabel = true) =>
   render(
-    <MultiviewTile
-      itemId={mockItem.Id}
-      frame={{ left: 0, top: 0, width: 320, height: 180 }}
-      muted
-      heard={false}
-      showLabel={showLabel}
-      onPress={jest.fn()}
-      onLongPress={jest.fn()}
-    />,
+    <QueryWrapper>
+      <MultiviewTile
+        itemId={mockItem.Id}
+        frame={{ left: 0, top: 0, width: 320, height: 180 }}
+        muted
+        heard={false}
+        showLabel={showLabel}
+        onPress={jest.fn()}
+        onLongPress={jest.fn()}
+        onPlayNext={onPlayNext}
+        onRemove={onRemove}
+      />
+    </QueryWrapper>,
   );
 
-const tick = async (position: number) => {
-  await act(async () => mockOnProgress?.({ nativeEvent: { position } }));
+const tick = async (position: number, duration = 0) => {
+  await act(async () =>
+    mockOnProgress?.({ nativeEvent: { position, duration } }),
+  );
 };
 const playerState = async (state: {
   isPaused?: boolean;
@@ -136,7 +156,101 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockOnProgress = undefined;
   mockOnState = undefined;
-  mockItem = { Id: "ep-5", Name: "Episode 5", Type: "Episode" };
+  mockItem = {
+    Id: "ep-5",
+    Name: "Episode 5",
+    Type: "Episode",
+    SeriesId: "show-1",
+  } as typeof mockItem;
+  mockGetEpisodes.mockResolvedValue({
+    data: {
+      Items: [
+        { Id: "ep-4", Name: "Episode 4" },
+        { Id: "ep-5", Name: "Episode 5" },
+        { Id: "ep-6", Name: "Episode 6" },
+      ],
+    },
+  });
+});
+
+describe("when the item finishes", () => {
+  const DURATION = 1302;
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  const playToTheEnd = async () => {
+    await renderTile();
+    await tick(1290, DURATION);
+    await tick(1301, DURATION);
+    // No more ticks: MPV has reached the end of the file.
+    await act(async () => jest.advanceTimersByTime(3_000));
+  };
+  const finished = () => screen.queryByText("multiview.finished");
+
+  test("says it has finished instead of loading forever", async () => {
+    // Reported: an episode that ended sat on the loading wheel for good.
+    await playToTheEnd();
+    expect(finished()).toBeTruthy();
+    expect(starting()).toBeNull();
+  });
+
+  test("a stall far from the end is still a stall", async () => {
+    await renderTile();
+    await tick(100, DURATION);
+    await tick(101, DURATION);
+    await act(async () => jest.advanceTimersByTime(3_000));
+    expect(starting()).toBeTruthy();
+    expect(finished()).toBeNull();
+  });
+
+  test("pausing itself on the last frame counts as finished", async () => {
+    await renderTile();
+    await tick(1290, DURATION);
+    await tick(1301, DURATION);
+    await playerState({ isPaused: true });
+    expect(finished()).toBeTruthy();
+  });
+
+  test("offers the next episode, which plays in this tile", async () => {
+    await playToTheEnd();
+    await fireEvent.press(
+      await screen.findByText("multiview.play_next:Episode 6"),
+    );
+    expect(mockGetEpisodes).toHaveBeenCalledWith(
+      expect.objectContaining({ seriesId: "show-1", adjacentTo: "ep-5" }),
+    );
+    expect(onPlayNext).toHaveBeenCalledWith("ep-6");
+  });
+
+  test("the last episode offers no next one", async () => {
+    mockGetEpisodes.mockResolvedValue({
+      data: { Items: [{ Id: "ep-4" }, { Id: "ep-5" }] },
+    });
+    await playToTheEnd();
+    await act(async () => {});
+    expect(screen.queryByText(/multiview\.play_next/)).toBeNull();
+  });
+
+  test("a movie offers no next one, and asks nothing of the server", async () => {
+    mockItem = { Id: "m-1", Name: "Dune", Type: "Movie" };
+    await playToTheEnd();
+    await act(async () => {});
+    expect(screen.queryByText(/multiview\.play_next/)).toBeNull();
+    expect(mockGetEpisodes).not.toHaveBeenCalled();
+  });
+
+  test("play again starts it over", async () => {
+    await playToTheEnd();
+    await fireEvent.press(screen.getByText("multiview.play_again"));
+    expect(mockPlayer.seekTo).toHaveBeenCalledWith(0);
+    expect(mockPlayer.play).toHaveBeenCalled();
+  });
+
+  test("remove takes the tile off", async () => {
+    await playToTheEnd();
+    await fireEvent.press(screen.getByText("multiview.remove_tile"));
+    expect(onRemove).toHaveBeenCalled();
+  });
 });
 
 describe("the loading wheel", () => {

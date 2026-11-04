@@ -42,6 +42,13 @@ export const MULTIVIEW_SEEK_FORWARD_SECONDS = 30;
 export const MULTIVIEW_STALL_DELAY = 2_000;
 
 /**
+ * How close, in seconds, to the end of a movie or episode a tile that stops
+ * moving has to be for it to count as finished rather than stalled. MPV's last
+ * progress tick lands a little short of the duration.
+ */
+export const MULTIVIEW_END_TOLERANCE = 3;
+
+/**
  * Buffer settings for one tile. Each tile is its own MPV instance, so the
  * single-player defaults (up to 150 MB forward each) would multiply by the
  * tile count. These are the lowest values the native player accepts.

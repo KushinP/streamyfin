@@ -1,5 +1,7 @@
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
+import { getShowApi } from "@jellyfin/sdk/lib/utils/api";
+import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,7 +15,7 @@ import {
 } from "@/constants/Multiview";
 import { useMultiviewTileStream } from "@/hooks/useMultiviewTileStream";
 import { MpvPlayerView, type MpvPlayerViewRef } from "@/modules";
-import { apiAtom } from "@/utils/atoms/api";
+import { apiAtom, userAtom } from "@/utils/atoms/api";
 import {
   applyMpvSubtitleSelection,
   compareTracksForMenu,
@@ -22,6 +24,7 @@ import {
 } from "@/utils/jellyfin/subtitleUtils";
 import type { TileFrame } from "@/utils/multiview/multiview";
 import { createPlaybackStartWatch } from "@/utils/multiview/playbackStart";
+import { isAtEnd, nextEpisodeIn } from "@/utils/multiview/tilePlayback";
 
 interface Props {
   itemId: string;
@@ -38,6 +41,10 @@ interface Props {
   onLongPress: () => void;
   /** A playback control was used; keeps the toolbar and controls up. */
   onInteract?: () => void;
+  /** Plays this item in the tile's place: the next episode, once one ends. */
+  onPlayNext?: (itemId: string) => void;
+  /** Takes the tile off the screen. */
+  onRemove?: () => void;
 }
 
 export function MultiviewTile({
@@ -49,10 +56,13 @@ export function MultiviewTile({
   onPress,
   onLongPress,
   onInteract,
+  onPlayNext,
+  onRemove,
 }: Props) {
   const { t } = useTranslation();
   const { showActionSheetWithOptions } = useActionSheet();
   const api = useAtomValue(apiAtom);
+  const user = useAtomValue(userAtom);
   const playerRef = useRef<MpvPlayerViewRef>(null);
   const { state, onPosition } = useMultiviewTileStream(itemId);
   // Read from onLoad, which fires once the player can take a mute: a mute
@@ -66,8 +76,13 @@ export function MultiviewTile({
   const [paused, setPaused] = useState(false);
   const [seeking, setSeeking] = useState(false);
   const [stalled, setStalled] = useState(false);
+  const [ended, setEnded] = useState(false);
   const lastPosition = useRef<number | null>(null);
+  const duration = useRef(0);
   const lastMoveAt = useRef(Date.now());
+  const stoppedAtEnd = () =>
+    lastPosition.current !== null &&
+    isAtEnd(lastPosition.current, duration.current);
 
   useEffect(() => {
     void playerRef.current?.setMute(muted);
@@ -83,29 +98,62 @@ export function MultiviewTile({
   }, []);
 
   // A stream that stops delivering sends no more ticks, so the stall is
-  // noticed by a clock rather than by a tick. A pause is not a stall.
+  // noticed by a clock rather than by a tick. A pause is not a stall, and
+  // neither is a file that has simply played to its end: the embedded player
+  // sends no end event, it just stops ticking.
   useEffect(() => {
     if (!playing || paused) return;
     const timer = setInterval(() => {
       if (Date.now() - lastMoveAt.current > MULTIVIEW_STALL_DELAY) {
-        setStalled(true);
+        if (stoppedAtEnd()) setEnded(true);
+        else setStalled(true);
       }
     }, MULTIVIEW_STALL_DELAY / 4);
     return () => clearInterval(timer);
   }, [playing, paused]);
 
   const onProgress = useCallback(
-    (position: number) => {
+    (position: number, total: number) => {
       onPosition(position);
+      duration.current = total;
       if (position !== lastPosition.current) {
         lastPosition.current = position;
         lastMoveAt.current = Date.now();
         setStalled(false);
+        setEnded(false);
       }
       if (!playing && playbackStarted(position)) setPlaying(true);
     },
     [onPosition, playing, playbackStarted],
   );
+
+  // Asked for only once an episode has ended, the one moment it is wanted.
+  const nextEpisode = useQuery({
+    queryKey: ["multiview", "next", itemId],
+    enabled:
+      ended &&
+      !!api &&
+      state.status === "ready" &&
+      state.item.Type === "Episode" &&
+      !!state.item.SeriesId,
+    queryFn: async () => {
+      if (state.status !== "ready" || !state.item.SeriesId) return null;
+      const res = await getShowApi(api!).getEpisodes({
+        seriesId: state.item.SeriesId,
+        adjacentTo: itemId,
+        userId: user?.Id,
+        limit: 3,
+      });
+      return nextEpisodeIn(res.data.Items, itemId);
+    },
+  });
+
+  const playAgain = () => {
+    setEnded(false);
+    lastMoveAt.current = Date.now();
+    void playerRef.current?.seekTo(0);
+    void playerRef.current?.play();
+  };
 
   const control = (action: () => void) => () => {
     onInteract?.();
@@ -170,10 +218,16 @@ export function MultiviewTile({
 
   const waiting =
     state.status === "loading" ||
-    (state.status === "ready" && (!playing || seeking || (stalled && !paused)));
+    (state.status === "ready" &&
+      !ended &&
+      (!playing || seeking || (stalled && !paused)));
   // A live channel has no pause, no skip and no captions to offer here.
   const hasControls =
-    showLabel && state.status === "ready" && state.item.Type !== "TvChannel";
+    showLabel &&
+    !ended &&
+    state.status === "ready" &&
+    state.item.Type !== "TvChannel";
+  const next = nextEpisode.data;
 
   return (
     <View
@@ -194,13 +248,17 @@ export function MultiviewTile({
           source={state.source}
           style={StyleSheet.absoluteFill}
           onLoad={() => void playerRef.current?.setMute(mutedRef.current)}
-          onProgress={(e) => onProgress(e.nativeEvent.position)}
+          onProgress={(e) =>
+            onProgress(e.nativeEvent.position, e.nativeEvent.duration)
+          }
           onPlaybackStateChange={(e) => {
             const { isPaused, isLoading } = e.nativeEvent;
             if (isPaused !== undefined) {
               setPaused(isPaused);
               // The clock restarts on resume, or the pause reads as a stall.
               if (!isPaused) lastMoveAt.current = Date.now();
+              // MPV can also hold the last frame paused once a file is done.
+              else if (stoppedAtEnd()) setEnded(true);
             }
             if (isLoading !== undefined) setSeeking(isLoading);
           }}
@@ -249,6 +307,30 @@ export function MultiviewTile({
           </View>
         )}
       </Pressable>
+      {ended && (
+        <View style={[styles.center, styles.endedCard]}>
+          <Text className='text-white font-bold mb-2'>
+            {t("multiview.finished")}
+          </Text>
+          <View style={styles.endedActions}>
+            {!!next?.Id && (
+              <EndedButton
+                label={t("multiview.play_next", { name: next.Name ?? "" })}
+                primary
+                onPress={() => next.Id && onPlayNext?.(next.Id)}
+              />
+            )}
+            <EndedButton
+              label={t("multiview.play_again")}
+              onPress={playAgain}
+            />
+            <EndedButton
+              label={t("multiview.remove_tile")}
+              onPress={() => onRemove?.()}
+            />
+          </View>
+        </View>
+      )}
       {hasControls && (
         // box-none: the gaps around the buttons still reach the tile.
         <View style={styles.center} pointerEvents='box-none'>
@@ -319,6 +401,28 @@ function ControlButton({
   );
 }
 
+function EndedButton({
+  label,
+  primary,
+  onPress,
+}: {
+  label: string;
+  primary?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole='button'
+      style={[styles.endedButton, primary && styles.endedButtonPrimary]}
+    >
+      <Text className='text-xs text-white font-semibold' numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   tile: {
     position: "absolute",
@@ -350,6 +454,26 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
+  },
+  endedCard: {
+    backgroundColor: "rgba(0,0,0,0.7)",
+    paddingHorizontal: 8,
+  },
+  endedActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 6,
+  },
+  endedButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: "rgba(64,64,64,0.9)",
+    maxWidth: "100%",
+  },
+  endedButtonPrimary: {
+    backgroundColor: "#9334E9",
   },
   controls: {
     flexDirection: "row",

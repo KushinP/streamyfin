@@ -1514,6 +1514,9 @@
     "captions_off": "Off",
     "captions_track": "Track {{number}}",
     "no_captions": "This one has no captions",
+    "finished": "Finished",
+    "play_next": "Play next: {{name}}",
+    "play_again": "Play again",
     "on_screen": "On screen",
     "continue_watching": "Continue watching",
     "empty": "Add a channel or a show to start watching"

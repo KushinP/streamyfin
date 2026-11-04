@@ -26,6 +26,7 @@ import {
   type MultiviewState,
   promoteTile,
   removeTile,
+  replaceTile,
   tapTile,
   tileFrames,
   toggleAllAudio,
@@ -136,7 +137,9 @@ export default function MultiviewScreen() {
         {state.tiles.map((tile, i) =>
           frames[i] ? (
             <MultiviewTile
-              key={tile.key}
+              // The item is part of the key: a tile that moves on to the next
+              // episode starts over as a fresh player and closes the old stream.
+              key={`${tile.key}:${tile.itemId}`}
               itemId={tile.itemId}
               frame={frames[i]}
               muted={isTileMuted(state, tile.key)}
@@ -145,6 +148,10 @@ export default function MultiviewScreen() {
               onPress={() => onTilePress(tile.key)}
               onLongPress={() => onTileLongPress(tile.key)}
               onInteract={onTileInteract}
+              onPlayNext={(itemId) =>
+                setState((s) => replaceTile(s, tile.key, itemId))
+              }
+              onRemove={() => setState((s) => removeTile(s, tile.key))}
             />
           ) : null,
         )}

@@ -6,6 +6,7 @@ import {
   type MultiviewState,
   promoteTile,
   removeTile,
+  replaceTile,
   selectAudio,
   tapTile,
   tileFrames,
@@ -98,6 +99,28 @@ describe("multiview tiles", () => {
   test("switching back to grid keeps the order", () => {
     const focus = toggleLayout(selectAudio(withTiles("a", "b"), "k-b"));
     expect(toggleLayout(focus).tiles.map((t) => t.itemId)).toEqual(["b", "a"]);
+  });
+});
+
+describe("replaceTile", () => {
+  test("puts a new item in the tile's place, keeping its spot and sound", () => {
+    const heard = selectAudio(withTiles("a", "b"), "k-b");
+    const state = replaceTile(heard, "k-b", "c");
+    expect(state.tiles).toEqual([
+      { key: "k-a", itemId: "a" },
+      { key: "k-b", itemId: "c" },
+    ]);
+    expect(state.audio).toBe("k-b");
+  });
+
+  test("refuses an item already on screen", () => {
+    const state = withTiles("a", "b");
+    expect(replaceTile(state, "k-b", "a")).toBe(state);
+  });
+
+  test("changes nothing for a tile that is not there", () => {
+    const state = withTiles("a");
+    expect(replaceTile(state, "missing", "c")).toBe(state);
   });
 });
 

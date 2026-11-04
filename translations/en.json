@@ -1069,6 +1069,9 @@
     "page_of": "Page {{current}} of {{total}}",
     "no_programs": "No programs available",
     "no_channels": "No channels available",
+    "next_at": "Next {{time}} · {{title}}",
+    "filter_all": "All",
+    "filter_favorites": "Favorites",
     "tabs": {
       "programs": "Programs",
       "guide": "Guide",
@@ -1492,6 +1495,7 @@
   },
   "multiview": {
     "open": "Open multiview",
+    "chip": "Multiview",
     "add_tile": "Add to multiview",
     "tab_media": "Media",
     "search_channels": "Search channels",

@@ -92,6 +92,23 @@ export const AmbientTint = {
   minSaturation: 0.15,
 } as const;
 
+/** A channel in the phone's Live TV Channels list (ChannelNowNextRow). */
+export const ChannelRowColors = {
+  tile: "rgba(255, 255, 255, 0.06)",
+  tileEdge: "rgba(255, 255, 255, 0.12)",
+  separator: "rgba(255, 255, 255, 0.08)",
+  pressed: "rgba(255, 255, 255, 0.06)",
+  track: "rgba(255, 255, 255, 0.12)",
+  /** The far end of the progress bar, the lime of the logo. */
+  progressEnd: "#bef264",
+  primaryText: "#e5e5ea",
+  secondary: "#8e8e93",
+  glyph: "rgba(255, 255, 255, 0.5)",
+  /** The filter chip that is on (All, Favorites). */
+  selectedChip: "#ffffff",
+  selectedChipText: "#000000",
+} as const;
+
 /** The Live TV tab bar on the phone, a glass segmented control. */
 export const LiveTvTabBarColors = {
   track: "rgba(255, 255, 255, 0.08)",

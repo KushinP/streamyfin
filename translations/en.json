@@ -1072,6 +1072,7 @@
     "next_at": "Next {{time}} · {{title}}",
     "filter_all": "All",
     "filter_favorites": "Favorites",
+    "today": "Today",
     "tabs": {
       "programs": "Programs",
       "guide": "Guide",

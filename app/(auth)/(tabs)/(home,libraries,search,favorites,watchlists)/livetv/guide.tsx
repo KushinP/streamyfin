@@ -1,37 +1,80 @@
-import { Ionicons } from "@expo/vector-icons";
+import type {
+  BaseItemDto,
+  BaseItemDtoQueryResult,
+} from "@jellyfin/sdk/lib/generated-client/models";
 import { getLiveTvApi } from "@jellyfin/sdk/lib/utils/api";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import React, { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dimensions, ScrollView, TouchableOpacity, View } from "react-native";
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ItemImage } from "@/components/common/ItemImage";
 import { Text } from "@/components/common/Text";
 import { HourHeader } from "@/components/livetv/HourHeader";
 import { LiveTVGuideRow } from "@/components/livetv/LiveTVGuideRow";
+import { ChannelRowColors, GuideColors } from "@/constants/Colors";
+import {
+  LIVE_TV_GUIDE_CHANNEL_WIDTH,
+  LIVE_TV_GUIDE_CHANNELS_PAGE,
+  LIVE_TV_GUIDE_DAYS,
+  LIVE_TV_GUIDE_HEADER_HEIGHT,
+  LIVE_TV_GUIDE_HOUR_WIDTH,
+  LIVE_TV_GUIDE_LOAD_AHEAD,
+  LIVE_TV_GUIDE_ROW_HEIGHT,
+} from "@/constants/LiveTv";
+import { useLiveTvClock } from "@/hooks/useLiveTvClock";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
+import {
+  guideDays,
+  guideHours,
+  guideWindow,
+  nowLineOffset,
+} from "@/utils/livetv/guideLayout";
+import { channelNumber } from "@/utils/livetv/nowNext";
 
-const HOUR_HEIGHT = 30;
-const ITEMS_PER_PAGE = 20;
+const HOUR_MS = 60 * 60 * 1000;
 
-const MemoizedLiveTVGuideRow = React.memo(LiveTVGuideRow);
+const channelIds = (page: BaseItemDtoQueryResult | undefined) =>
+  (page?.Items ?? [])
+    .map((channel) => channel.Id)
+    .filter((id): id is string => !!id);
 
 // Covered by components/livetv/liveTvGuidePage.test.tsx.
 export default function LiveTvGuidePage() {
   const [api] = useAtom(apiAtom);
   const [user] = useAtom(userAtom);
   const insets = useSafeAreaInsets();
-  const [date, _setDate] = useState<Date>(new Date());
-  const [currentPage, setCurrentPage] = useState(1);
+  const { t } = useTranslation();
+  const now = useLiveTvClock();
+  const [dayIndex, setDayIndex] = useState(0);
 
-  const { data: channels } = useQuery({
-    queryKey: ["livetv", "channels", currentPage],
-    queryFn: async () => {
-      if (!api) return null;
-      const res = await getLiveTvApi(api).getLiveTvChannels({
-        startIndex: (currentPage - 1) * ITEMS_PER_PAGE,
-        limit: ITEMS_PER_PAGE,
+  // Rebuilt at midnight and on the hour, not on every tick of the clock.
+  const today = new Date(now).toDateString();
+  const days = useMemo(() => guideDays(now, LIVE_TV_GUIDE_DAYS), [today]);
+  const day = days[dayIndex] ?? days[0];
+  const hour = Math.floor(now / HOUR_MS);
+  const window = useMemo(() => guideWindow(day, now), [day, hour]);
+  const width = guideHours(window).length * LIVE_TV_GUIDE_HOUR_WIDTH;
+  const nowLine = nowLineOffset(now, window, LIVE_TV_GUIDE_HOUR_WIDTH);
+
+  const channels = useInfiniteQuery({
+    queryKey: ["livetv", "guide", "channels"],
+    queryFn: async ({ pageParam }) => {
+      const res = await getLiveTvApi(api!).getLiveTvChannels({
+        startIndex: pageParam,
+        limit: LIVE_TV_GUIDE_CHANNELS_PAGE,
         enableFavoriteSorting: true,
         userId: user?.Id,
         addCurrentProgram: false,
@@ -40,173 +83,230 @@ export default function LiveTvGuidePage() {
       });
       return res.data;
     },
+    initialPageParam: 0,
+    getNextPageParam: (last, all) =>
+      (last.Items?.length ?? 0) < LIVE_TV_GUIDE_CHANNELS_PAGE
+        ? undefined
+        : all.length * LIVE_TV_GUIDE_CHANNELS_PAGE,
     // The page can mount before the api is restored.
     enabled: !!api,
   });
+  const pages = channels.data?.pages ?? [];
 
-  const { data: programs } = useQuery({
-    queryKey: ["livetv", "programs", date, currentPage],
-    queryFn: async () => {
-      if (!api) return null;
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      const now = new Date();
-      const isToday = startOfDay.toDateString() === now.toDateString();
-
-      const res = await getLiveTvApi(api).getPrograms({
-        getProgramsDto: {
-          MaxStartDate: endOfDay.toISOString(),
-          MinEndDate: isToday ? now.toISOString() : startOfDay.toISOString(),
-          ChannelIds: channels?.Items?.map((c) => c.Id).filter(
-            Boolean,
-          ) as string[],
-          ImageTypeLimit: 1,
-          EnableImages: false,
-          SortBy: ["StartDate"],
-          EnableTotalRecordCount: false,
-          EnableUserData: false,
+  // One programs request per page of channels, so loading more channels does
+  // not fetch the ones already on screen again.
+  const programs = useQueries({
+    queries: pages.map((page) => {
+      const ids = channelIds(page);
+      return {
+        queryKey: ["livetv", "guide", "programs", window.start, ids],
+        queryFn: async () => {
+          const res = await getLiveTvApi(api!).getPrograms({
+            getProgramsDto: {
+              MinEndDate: new Date(window.start).toISOString(),
+              MaxStartDate: new Date(window.end).toISOString(),
+              ChannelIds: ids,
+              ImageTypeLimit: 1,
+              EnableImages: false,
+              SortBy: ["StartDate"],
+              EnableTotalRecordCount: false,
+              EnableUserData: false,
+            },
+          });
+          return res.data.Items ?? [];
         },
-      });
-      return res.data;
-    },
-    // The channels can come back from the persisted cache before the api does.
-    enabled: !!api && !!channels,
+        // The channels can come back from the persisted cache before the api.
+        enabled: !!api && ids.length > 0,
+      };
+    }),
   });
 
-  const screenWidth = Dimensions.get("window").width;
+  const scrollX = useSharedValue(0);
+  const onHorizontalScroll = useAnimatedScrollHandler((event) => {
+    scrollX.value = event.contentOffset.x;
+  });
+  const horizontal = useRef<ScrollView>(null);
 
-  const [scrollX, setScrollX] = useState(0);
+  // Another day opens at its start, not where the last one was left.
+  useEffect(() => {
+    horizontal.current?.scrollTo({ x: 0, animated: false });
+    scrollX.value = 0;
+  }, [dayIndex]);
 
-  const handleNextPage = useCallback(() => {
-    setCurrentPage((prev) => prev + 1);
-  }, []);
-
-  const handlePrevPage = useCallback(() => {
-    setCurrentPage((prev) => Math.max(1, prev - 1));
-  }, []);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = channels;
+  const onVerticalScroll = useCallback(
+    ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
+      const left =
+        contentSize.height - contentOffset.y - layoutMeasurement.height;
+      if (left < LIVE_TV_GUIDE_LOAD_AHEAD && hasNextPage && !isFetchingNextPage)
+        fetchNextPage();
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  );
 
   return (
-    <ScrollView
-      nestedScrollEnabled
-      contentInsetAdjustmentBehavior='automatic'
-      key={"home"}
-      contentContainerStyle={{
-        paddingLeft: insets.left,
-        paddingRight: insets.right,
-        paddingBottom: 16,
-      }}
-    >
-      <PageButtons
-        currentPage={currentPage}
-        onPrevPage={handlePrevPage}
-        onNextPage={handleNextPage}
-        isNextDisabled={
-          !channels || (channels?.Items?.length || 0) < ITEMS_PER_PAGE
-        }
-      />
+    <View style={styles.page}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.daysBar}
+        contentContainerStyle={styles.days}
+      >
+        {days.map((d, index) => (
+          <Pressable
+            key={d.getTime()}
+            onPress={() => setDayIndex(index)}
+            accessibilityRole='button'
+            accessibilityState={{ selected: index === dayIndex }}
+            style={[styles.chip, index === dayIndex && styles.chipSelected]}
+          >
+            <Text
+              style={[
+                styles.chipLabel,
+                index === dayIndex && styles.chipLabelSelected,
+              ]}
+            >
+              {index === 0
+                ? t("live_tv.today")
+                : d.toLocaleDateString([], {
+                    weekday: "short",
+                    day: "numeric",
+                  })}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
 
-      <View className='flex flex-row'>
-        <View className='flex flex-col w-[64px]'>
-          <View
-            style={{
-              height: HOUR_HEIGHT,
-            }}
-            className='bg-neutral-800'
-          />
-          {channels?.Items?.map((c, i) => (
-            <View className='h-16 w-16 mr-4 rounded-lg overflow-hidden' key={i}>
-              <ItemImage
-                style={{
-                  width: "100%",
-                  height: "100%",
-                }}
-                contentFit='contain'
-                item={c}
-              />
-            </View>
-          ))}
-        </View>
-        <ScrollView
-          style={{
-            width: screenWidth - 64,
-          }}
-          horizontal
-          scrollEnabled
-          onScroll={(e) => {
-            setScrollX(e.nativeEvent.contentOffset.x);
-          }}
-        >
-          <View className='flex flex-col'>
-            <HourHeader height={HOUR_HEIGHT} />
-            {channels?.Items?.map((c, _i) => (
-              <MemoizedLiveTVGuideRow
-                channel={c}
-                programs={programs?.Items}
-                key={c.Id}
-                scrollX={scrollX}
-              />
-            ))}
+      <ScrollView
+        nestedScrollEnabled
+        // The page sits below the Live TV bar, not under the header: an
+        // automatic inset opened it scrolled under the bar.
+        contentInsetAdjustmentBehavior='never'
+        onScroll={onVerticalScroll}
+        scrollEventThrottle={100}
+        testID='guide-scroll'
+        contentContainerStyle={{
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+          paddingBottom: insets.bottom + 96,
+        }}
+      >
+        <View style={styles.grid}>
+          {/* Outside the horizontal scroll, so the channels stay put. */}
+          <View style={styles.channels}>
+            <View style={styles.corner} />
+            {pages.flatMap((page) =>
+              (page.Items ?? []).map((channel) => (
+                <ChannelTile key={channel.Id} channel={channel} />
+              )),
+            )}
           </View>
-        </ScrollView>
-      </View>
-    </ScrollView>
+          <Animated.ScrollView
+            ref={horizontal as never}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            onScroll={onHorizontalScroll}
+            scrollEventThrottle={16}
+          >
+            <View style={{ width }}>
+              <HourHeader window={window} />
+              {pages.map((page, index) =>
+                (page.Items ?? []).map((channel) => (
+                  <LiveTVGuideRow
+                    key={channel.Id}
+                    channel={channel}
+                    programs={programs[index]?.data}
+                    window={window}
+                    now={now}
+                    scrollX={scrollX}
+                  />
+                )),
+              )}
+              {nowLine !== null && (
+                <View
+                  testID='guide-now-line'
+                  pointerEvents='none'
+                  style={[styles.nowLine, { left: nowLine }]}
+                />
+              )}
+            </View>
+          </Animated.ScrollView>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
-interface PageButtonsProps {
-  currentPage: number;
-  onPrevPage: () => void;
-  onNextPage: () => void;
-  isNextDisabled: boolean;
-}
-
-const PageButtons: React.FC<PageButtonsProps> = ({
-  currentPage,
-  onPrevPage,
-  onNextPage,
-  isNextDisabled,
-}) => {
-  const { t } = useTranslation();
+const ChannelTile = ({ channel }: { channel: BaseItemDto }) => {
+  const number = channelNumber(channel);
   return (
-    <View className='flex flex-row justify-between items-center bg-neutral-800 w-full px-4 py-2'>
-      <TouchableOpacity
-        onPress={onPrevPage}
-        disabled={currentPage === 1}
-        className='flex flex-row items-center'
-      >
-        <Ionicons
-          name='chevron-back'
-          size={24}
-          color={currentPage === 1 ? "gray" : "white"}
+    <View style={styles.channel}>
+      <View style={styles.logo}>
+        <ItemImage
+          item={channel}
+          style={styles.logoImage}
+          contentFit='contain'
         />
-        <Text
-          className={`ml-1 ${
-            currentPage === 1 ? "text-gray-500" : "text-white"
-          }`}
-        >
-          {t("live_tv.previous")}
-        </Text>
-      </TouchableOpacity>
-      <Text className='text-white'>Page {currentPage}</Text>
-      <TouchableOpacity
-        onPress={onNextPage}
-        disabled={isNextDisabled}
-        className='flex flex-row items-center'
-      >
-        <Text
-          className={`mr-1 ${isNextDisabled ? "text-gray-500" : "text-white"}`}
-        >
-          {t("live_tv.next")}
-        </Text>
-        <Ionicons
-          name='chevron-forward'
-          size={24}
-          color={isNextDisabled ? "gray" : "white"}
-        />
-      </TouchableOpacity>
+      </View>
+      {number && <Text style={styles.number}>{number}</Text>}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  page: { flex: 1 },
+  // A ScrollView shrinks by default; this one keeps the height of its chips.
+  daysBar: { flexGrow: 0, flexShrink: 0 },
+  days: { gap: 8, paddingHorizontal: 16, paddingBottom: 8 },
+  chip: {
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    backgroundColor: ChannelRowColors.tile,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: ChannelRowColors.tileEdge,
+  },
+  chipSelected: {
+    backgroundColor: ChannelRowColors.selectedChip,
+    borderColor: ChannelRowColors.selectedChip,
+  },
+  chipLabel: { fontSize: 13, fontWeight: "600" },
+  chipLabelSelected: { color: ChannelRowColors.selectedChipText },
+  grid: { flexDirection: "row" },
+  channels: { width: LIVE_TV_GUIDE_CHANNEL_WIDTH },
+  corner: {
+    height: LIVE_TV_GUIDE_HEADER_HEIGHT,
+    backgroundColor: GuideColors.header,
+  },
+  channel: {
+    height: LIVE_TV_GUIDE_ROW_HEIGHT,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  logo: {
+    width: 48,
+    height: 36,
+    borderRadius: 8,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: ChannelRowColors.tile,
+  },
+  logoImage: { width: 40, height: 30 },
+  number: {
+    fontSize: 10,
+    color: GuideColors.time,
+    fontVariant: ["tabular-nums"],
+  },
+  nowLine: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: GuideColors.nowLine,
+  },
+});

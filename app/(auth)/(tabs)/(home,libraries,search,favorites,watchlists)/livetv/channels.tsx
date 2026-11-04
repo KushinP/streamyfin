@@ -73,39 +73,40 @@ export default function LiveTvChannelsPage() {
 
   return (
     <View className='flex flex-1'>
+      {/* Above the list, not its header: FlashList keeps its first row in
+          view when a header gets its height after the first layout, which
+          opened the page with the chips scrolled off. */}
+      <View style={styles.toolbar}>
+        <FilterChip
+          label={t("live_tv.filter_all")}
+          selected={filter === "all"}
+          onPress={() => setFilter("all")}
+        />
+        {favorites.length > 0 && (
+          <FilterChip
+            label={t("live_tv.filter_favorites")}
+            selected={filter === "favorites"}
+            onPress={() => setFilter("favorites")}
+          />
+        )}
+        {/* Multiview renders several MPV players at once, which only the
+            iOS player allows; see isMultiviewAvailable. */}
+        {showMultiview && (
+          <Pressable
+            onPress={() => router.push("/multiview")}
+            accessibilityRole='button'
+            accessibilityLabel={t("multiview.open")}
+            style={[styles.chip, styles.multiview]}
+          >
+            <Ionicons name='grid' size={13} color={Colors.primaryLight} />
+            <Text style={styles.chipLabel}>{t("multiview.chip")}</Text>
+          </Pressable>
+        )}
+      </View>
       <FlashList
         data={shown}
         keyExtractor={(channel) => channel.Id ?? ""}
         extraData={{ next, now }}
-        ListHeaderComponent={
-          <View style={styles.toolbar}>
-            <FilterChip
-              label={t("live_tv.filter_all")}
-              selected={filter === "all"}
-              onPress={() => setFilter("all")}
-            />
-            {favorites.length > 0 && (
-              <FilterChip
-                label={t("live_tv.filter_favorites")}
-                selected={filter === "favorites"}
-                onPress={() => setFilter("favorites")}
-              />
-            )}
-            {/* Multiview renders several MPV players at once, which only the
-                iOS player allows; see isMultiviewAvailable. */}
-            {showMultiview && (
-              <Pressable
-                onPress={() => router.push("/multiview")}
-                accessibilityRole='button'
-                accessibilityLabel={t("multiview.open")}
-                style={[styles.chip, styles.multiview]}
-              >
-                <Ionicons name='grid' size={13} color={Colors.primaryLight} />
-                <Text style={styles.chipLabel}>{t("multiview.chip")}</Text>
-              </Pressable>
-            )}
-          </View>
-        }
         renderItem={({ item }) => (
           <ChannelNowNextRow
             channel={item}

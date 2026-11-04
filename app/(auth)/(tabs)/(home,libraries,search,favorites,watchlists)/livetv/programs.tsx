@@ -26,7 +26,9 @@ function MobileLiveTVPrograms() {
   return (
     <ScrollView
       nestedScrollEnabled
-      contentInsetAdjustmentBehavior='automatic'
+      // The page sits below the Live TV bar, not under the header: an
+      // automatic inset opened it scrolled under the bar.
+      contentInsetAdjustmentBehavior='never'
       key={"home"}
       contentContainerStyle={{
         paddingLeft: insets.left,

@@ -7,7 +7,13 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import LiveTvGuidePage from "@/app/(auth)/(tabs)/(home,libraries,search,favorites,watchlists)/livetv/guide";
 import { apiAtom } from "@/providers/JellyfinProvider";
@@ -20,6 +26,10 @@ jest.mock("@/providers/JellyfinProvider", () => {
     userAtom: atom({ Id: "user-1" }),
   };
 });
+jest.mock(
+  "react-native-reanimated",
+  () => jest.requireActual("@/test-utils/reanimated").reanimatedModule,
+);
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
@@ -59,6 +69,10 @@ const guideApi = () => {
   api.mock.onPost(/\/LiveTv\/Programs$/).reply(200, PROGRAMS);
   return api;
 };
+
+/** Lets the responses to requests already sent render before a test ends. */
+const settle = () =>
+  act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
 const renderGuide = async (seed?: (client: QueryClient) => void) => {
   /** What the app's own query cache would have handed to Sentry. */
@@ -100,7 +114,10 @@ describe("LiveTvGuidePage", () => {
   test("loads the programs of restored channels only once the api is there", async () => {
     const api = guideApi();
     const { store, errors } = await renderGuide((client) =>
-      client.setQueryData(["livetv", "channels", 1], CHANNELS),
+      client.setQueryData(["livetv", "guide", "channels"], {
+        pages: [CHANNELS],
+        pageParams: [0],
+      }),
     );
 
     expect(errors).toEqual([]);
@@ -126,5 +143,87 @@ describe("LiveTvGuidePage", () => {
       ChannelIds: ["channel-1"],
     });
     expect(errors).toEqual([]);
+  });
+
+  describe("with the clock at 20:15", () => {
+    const NOW = new Date(2026, 10, 3, 20, 15).getTime();
+    beforeEach(() => jest.spyOn(Date, "now").mockReturnValue(NOW));
+    afterEach(() => jest.restoreAllMocks());
+
+    test("asks for today from the top of the hour and draws the now line", async () => {
+      const api = guideApi();
+      const { store } = await renderGuide();
+      await act(async () => store.set(apiAtom, api));
+
+      await waitFor(() => expect(api.mock.history.post).toHaveLength(1));
+      expect(JSON.parse(api.mock.history.post[0].data)).toMatchObject({
+        MinEndDate: new Date(2026, 10, 3, 20).toISOString(),
+        MaxStartDate: new Date(2026, 10, 4).toISOString(),
+      });
+      // A quarter of the way into the first hour.
+      expect(screen.getByTestId("guide-now-line")).toHaveStyle({ left: 50 });
+      await settle();
+    });
+
+    test("another day's chip asks for that whole day, with no now line", async () => {
+      const api = guideApi();
+      const { store } = await renderGuide();
+      await act(async () => store.set(apiAtom, api));
+      await waitFor(() => expect(api.mock.history.post).toHaveLength(1));
+
+      // The second chip is tomorrow; its label is the locale's weekday.
+      await act(async () => fireEvent.press(screen.getAllByRole("button")[1]));
+
+      await waitFor(() => expect(api.mock.history.post).toHaveLength(2));
+      expect(JSON.parse(api.mock.history.post[1].data)).toMatchObject({
+        MinEndDate: new Date(2026, 10, 4).toISOString(),
+        MaxStartDate: new Date(2026, 10, 5).toISOString(),
+      });
+      expect(screen.queryByTestId("guide-now-line")).toBeNull();
+      await settle();
+    });
+  });
+
+  // Reported: the guide showed 20 channels a page behind Next/Previous
+  // buttons. It now loads the next channels as it nears the bottom.
+  test("loads more channels when scrolled near the bottom", async () => {
+    const api = makeApi();
+    const page = (from: number, count: number) => ({
+      Items: Array.from({ length: count }, (_, i) => ({
+        Id: `channel-${from + i}`,
+        Name: `Channel ${from + i}`,
+        Type: "TvChannel",
+      })),
+    });
+    api.mock
+      .onGet(/\/LiveTv\/Channels\?.*startIndex=0/)
+      .reply(200, page(0, 50))
+      .onGet(/\/LiveTv\/Channels\?.*startIndex=50/)
+      .reply(200, page(50, 3));
+    api.mock.onPost(/\/LiveTv\/Programs$/).reply(200, { Items: [] });
+    const { store } = await renderGuide();
+    await act(async () => store.set(apiAtom, api));
+    // The first page is on screen once its programs are asked for.
+    await waitFor(() => expect(api.mock.history.post).toHaveLength(1));
+
+    await act(async () =>
+      fireEvent.scroll(screen.getByTestId("guide-scroll"), {
+        nativeEvent: {
+          contentOffset: { y: 2800, x: 0 },
+          contentSize: { height: 3300, width: 400 },
+          layoutMeasurement: { height: 400, width: 400 },
+        },
+      }),
+    );
+
+    await waitFor(() => expect(api.mock.history.get).toHaveLength(2));
+    expect(api.mock.history.get[1].url).toContain("startIndex=50");
+    await waitFor(() => expect(api.mock.history.post).toHaveLength(2));
+    expect(JSON.parse(api.mock.history.post[1].data).ChannelIds).toEqual([
+      "channel-50",
+      "channel-51",
+      "channel-52",
+    ]);
+    await settle();
   });
 });

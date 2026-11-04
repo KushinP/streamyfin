@@ -109,6 +109,20 @@ export const ChannelRowColors = {
   selectedChipText: "#000000",
 } as const;
 
+/** The phone's Live TV guide (LiveTVGuideRow, HourHeader, the guide page). */
+export const GuideColors = {
+  header: "rgba(255, 255, 255, 0.06)",
+  hourLabel: "#8e8e93",
+  cellEdge: "rgba(255, 255, 255, 0.08)",
+  /** The program on now. */
+  liveCell: "rgba(16, 185, 129, 0.16)",
+  liveEdge: "rgba(16, 185, 129, 0.45)",
+  title: "#e5e5ea",
+  time: "#8e8e93",
+  /** The line at the current time, the accent. */
+  nowLine: PRIMARY_LIGHT,
+} as const;
+
 /** The Live TV tab bar on the phone, a glass segmented control. */
 export const LiveTvTabBarColors = {
   track: "rgba(255, 255, 255, 0.08)",

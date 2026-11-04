@@ -82,6 +82,25 @@ export const SheetColors = {
   idle: "#5a5a5a",
 } as const;
 
+/**
+ * The wash a movie or show page takes from its artwork (utils/ambientTint):
+ * how much of the colour is kept on its way to black, and how saturated a
+ * colour has to be to count as one rather than a grey.
+ */
+export const AmbientTint = {
+  strength: 0.32,
+  minSaturation: 0.15,
+} as const;
+
+/** The Live TV tab bar on the phone, a glass segmented control. */
+export const LiveTvTabBarColors = {
+  track: "rgba(255, 255, 255, 0.08)",
+  edge: "rgba(255, 255, 255, 0.14)",
+  pill: "rgba(255, 255, 255, 0.16)",
+  activeLabel: "#ffffff",
+  inactiveLabel: "rgba(255, 255, 255, 0.65)",
+} as const;
+
 /** The background of a page drawn under a parallax header (ParallaxPage). */
 export const ParallaxPageColors = {
   background: "black",

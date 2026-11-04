@@ -1,4 +1,6 @@
-import { render } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
+import { createStore, Provider } from "jotai";
+import { screenKeyCommandsAtom } from "@/utils/atoms/screenKeyCommands";
 import { AppKeyCommands } from "./AppKeyCommands";
 
 const mockSetCommands = jest.fn();
@@ -78,5 +80,45 @@ describe("AppKeyCommands", () => {
     await view.unmount();
     expect(mockSetCommands).toHaveBeenLastCalledWith([]);
     expect(mockListener).toBeNull();
+  });
+  test("adds a screen's own shortcuts while it is open, and hands them back", async () => {
+    const store = createStore();
+    const onCommand = jest.fn();
+    await render(
+      <Provider store={store}>
+        <AppKeyCommands />
+      </Provider>,
+    );
+    await act(async () =>
+      store.set(screenKeyCommandsAtom, {
+        commands: [
+          {
+            id: "multiview-layout",
+            input: "g",
+            modifiers: [],
+            title: "Change layout",
+          },
+        ],
+        onCommand,
+      }),
+    );
+    expect(mockSetCommands).toHaveBeenLastCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "tab-home" }),
+        {
+          id: "multiview-layout",
+          input: "g",
+          modifiers: [],
+          title: "Change layout",
+        },
+      ]),
+    );
+    mockListener?.("multiview-layout");
+    expect(onCommand).toHaveBeenCalledWith("multiview-layout");
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+
+    await act(async () => store.set(screenKeyCommandsAtom, null));
+    const last = mockSetCommands.mock.calls.at(-1)?.[0] as { id: string }[];
+    expect(last.some((c) => c.id === "multiview-layout")).toBe(false);
   });
 });

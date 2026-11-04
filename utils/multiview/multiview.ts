@@ -291,3 +291,25 @@ export const tileFrames = (
     ? focusFrames(count, width, height, gap)
     : gridFrames(count, width, height, gap);
 };
+
+/** Ids of multiview's keyboard shortcuts (iPad and the Mac). */
+export const MULTIVIEW_HEAR_KEY_PREFIX = "multiview-hear-";
+export const MULTIVIEW_LAYOUT_KEY = "multiview-layout";
+
+/**
+ * What a multiview shortcut does: the number keys hear tile N, counted from
+ * the main tile as the screen shows them, and G switches the layout. An id it
+ * does not know, or a tile that is not there, leaves the state as it is.
+ */
+export const applyMultiviewKey = (
+  state: MultiviewState,
+  id: string,
+): MultiviewState => {
+  if (id === MULTIVIEW_LAYOUT_KEY) {
+    return state.tiles.length >= 2 ? toggleLayout(state) : state;
+  }
+  if (!id.startsWith(MULTIVIEW_HEAR_KEY_PREFIX)) return state;
+  const tile =
+    state.tiles[Number(id.slice(MULTIVIEW_HEAR_KEY_PREFIX.length)) - 1];
+  return tile ? selectAudio(state, tile.key) : state;
+};

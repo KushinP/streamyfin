@@ -1,6 +1,7 @@
 import { MULTIVIEW_MAX_TILES } from "@/constants/Multiview";
 import {
   addTile,
+  applyMultiviewKey,
   emptyMultiview,
   isTileMuted,
   type MultiviewState,
@@ -262,5 +263,31 @@ describe("tileFrames", () => {
 
   test("a screen not measured yet has no frames", () => {
     expect(tileFrames("grid", 2, 0, 0)).toEqual([]);
+  });
+});
+
+describe("applyMultiviewKey", () => {
+  const three = ["a", "b", "c"].reduce(
+    (s, id, i) => addTile(s, id, `tile-${i}`),
+    emptyMultiview,
+  );
+
+  test("a number key hears that tile, counting from the main one", () => {
+    expect(applyMultiviewKey(three, "multiview-hear-2").audio).toBe("tile-1");
+    expect(applyMultiviewKey(three, "multiview-hear-3").audio).toBe("tile-2");
+  });
+
+  test("a number past the last tile changes nothing", () => {
+    expect(applyMultiviewKey(three, "multiview-hear-4")).toBe(three);
+  });
+
+  test("G switches the layout once there are two tiles to arrange", () => {
+    expect(applyMultiviewKey(three, "multiview-layout").layout).toBe("focus");
+    const one = addTile(emptyMultiview, "a", "tile-0");
+    expect(applyMultiviewKey(one, "multiview-layout")).toBe(one);
+  });
+
+  test("an id it does not know changes nothing", () => {
+    expect(applyMultiviewKey(three, "tab-home")).toBe(three);
   });
 });

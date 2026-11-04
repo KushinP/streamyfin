@@ -1504,6 +1504,7 @@
     "no_matches": "Nothing matches “{{query}}”",
     "nothing_in_progress": "You're not part way through anything. Search to find something to watch.",
     "change_layout": "Change layout",
+    "hear_tile": "Hear tile {{number}}",
     "audio_all": "Play sound from every tile",
     "audio_one": "Play sound from one tile",
     "close": "Close multiview",

@@ -5,15 +5,19 @@ import {
   ScrollView,
   StyleProp,
   useWindowDimensions,
-  View,
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/common/Text";
 import { useTVFocusAnimation } from "@/components/tv/hooks/useTVFocusAnimation";
+import {
+  TV_NAV_BAR_FOCUS_ROOM,
+  TV_NAV_BAR_SLIDE_MS,
+} from "@/constants/TVNavBar";
 import { TVPadding } from "@/constants/TVSizes";
 import { useScaledTVTypography } from "@/constants/TVTypography";
 import { scaleSize } from "@/utils/scaleSize";
+import { useNavBarPresence } from "./hooks/useNavBarPresence";
 import { tvNavBarTopInset } from "./tvNavBarInset";
 
 export interface TVNavBarTab {
@@ -36,12 +40,22 @@ const TVNavBarTabItem: React.FC<{
     nativeEvent: { layout: { x: number; width: number } };
   }) => void;
   hasTVPreferredFocus: boolean;
-}> = ({ label, isActive, onSelect, onLayout, hasTVPreferredFocus }) => {
+  onFocusChange: (focused: boolean) => void;
+}> = ({
+  label,
+  isActive,
+  onSelect,
+  onLayout,
+  hasTVPreferredFocus,
+  onFocusChange,
+}) => {
   const typography = useScaledTVTypography();
   const { focused, handleFocus, handleBlur, animatedStyle } =
     useTVFocusAnimation({
       scaleAmount: 1.05,
       duration: 120,
+      onFocus: () => onFocusChange(true),
+      onBlur: () => onFocusChange(false),
     });
 
   const bg = focused
@@ -103,6 +117,19 @@ export const TVNavBar: React.FC<TVNavBarProps> = ({
   );
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const { visible, onItemFocus, onItemBlur } = useNavBarPresence();
+  const onFocusChange = React.useCallback(
+    (focused: boolean) => (focused ? onItemFocus() : onItemBlur()),
+    [onItemFocus, onItemBlur],
+  );
+  const shown = React.useRef(new Animated.Value(1)).current;
+  React.useEffect(() => {
+    Animated.timing(shown, {
+      toValue: visible ? 1 : 0,
+      duration: TV_NAV_BAR_SLIDE_MS,
+      useNativeDriver: true,
+    }).start();
+  }, [visible, shown]);
 
   const handleTabLayout = React.useCallback(
     (key: string) =>
@@ -130,11 +157,22 @@ export const TVNavBar: React.FC<TVNavBarProps> = ({
   if (tabs.length === 0) return null;
 
   return (
-    <View
+    // Hidden, it stays focusable: Up from the page still lands on a tab and
+    // brings it back.
+    <Animated.View
       style={[
         {
           paddingTop: tvNavBarTopInset(windowHeight, insets.top),
           paddingBottom: 8,
+          opacity: shown,
+          transform: [
+            {
+              translateY: shown.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-scaleSize(120), 0],
+              }),
+            },
+          ],
         },
         style,
       ]}
@@ -148,6 +186,9 @@ export const TVNavBar: React.FC<TVNavBarProps> = ({
           flexGrow: 1,
           justifyContent: "center",
           gap: scaleSize(12),
+          // Room for a focused tab's 1.05 scale: a horizontal ScrollView
+          // clips on Android, and the tab lost its top edge.
+          paddingVertical: scaleSize(TV_NAV_BAR_FOCUS_ROOM),
         }}
       >
         {tabs.map((tab) => (
@@ -158,9 +199,10 @@ export const TVNavBar: React.FC<TVNavBarProps> = ({
             onSelect={() => handleTabChange(tab.key)}
             onLayout={handleTabLayout(tab.key)}
             hasTVPreferredFocus={tab.key === activeTabKey}
+            onFocusChange={onFocusChange}
           />
         ))}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 };

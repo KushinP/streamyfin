@@ -1,7 +1,7 @@
 import {
   TV_NAV_BAR_TOP_GAP,
   TV_OVERSCAN_SAFE_RATIO,
-} from "@/constants/TVSizes";
+} from "@/constants/TVNavBar";
 
 /**
  * Space above the TV top bar: its usual gap below the safe-area inset, but

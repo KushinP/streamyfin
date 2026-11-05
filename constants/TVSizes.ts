@@ -41,6 +41,16 @@ export const TV_GRID_LOAD_MORE_DISTANCE = 600;
  */
 export const TV_BACKDROP_DEBOUNCE_MS = 300;
 
+/**
+ * Share of the screen a TV may crop at each edge (overscan). Android TV's
+ * guidelines keep content inside 5%; the Fire TV top bar sat 16 dp from the
+ * top and lost its upper edge.
+ */
+export const TV_OVERSCAN_SAFE_RATIO = 0.05;
+
+/** The TV top bar's gap above it, before the overscan margin is applied. */
+export const TV_NAV_BAR_TOP_GAP = 16;
+
 /** How long the TV Home backdrop takes to crossfade to the next item's art. */
 export const TV_BACKDROP_CROSSFADE_MS = 500;
 

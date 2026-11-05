@@ -4,6 +4,7 @@ import {
   Pressable,
   ScrollView,
   StyleProp,
+  useWindowDimensions,
   View,
   ViewStyle,
 } from "react-native";
@@ -13,6 +14,7 @@ import { useTVFocusAnimation } from "@/components/tv/hooks/useTVFocusAnimation";
 import { TVPadding } from "@/constants/TVSizes";
 import { useScaledTVTypography } from "@/constants/TVTypography";
 import { scaleSize } from "@/utils/scaleSize";
+import { tvNavBarTopInset } from "./tvNavBarInset";
 
 export interface TVNavBarTab {
   key: string;
@@ -100,6 +102,7 @@ export const TVNavBar: React.FC<TVNavBarProps> = ({
     {},
   );
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
 
   const handleTabLayout = React.useCallback(
     (key: string) =>
@@ -127,7 +130,15 @@ export const TVNavBar: React.FC<TVNavBarProps> = ({
   if (tabs.length === 0) return null;
 
   return (
-    <View style={[{ paddingTop: insets.top + 16, paddingBottom: 8 }, style]}>
+    <View
+      style={[
+        {
+          paddingTop: tvNavBarTopInset(windowHeight, insets.top),
+          paddingBottom: 8,
+        },
+        style,
+      ]}
+    >
       <ScrollView
         ref={scrollRef}
         horizontal

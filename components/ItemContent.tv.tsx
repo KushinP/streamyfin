@@ -45,6 +45,7 @@ import {
   TVTechnicalDetails,
 } from "@/components/tv";
 import type { Track } from "@/components/video-player/controls/types";
+import { TV_IMAGE_QUALITY } from "@/constants/Images";
 import { useScaledTVTypography } from "@/constants/TVTypography";
 import useRouter from "@/hooks/useAppRouter";
 import useDefaultPlaySettings from "@/hooks/useDefaultPlaySettings";
@@ -600,7 +601,7 @@ export const ItemContentTV: React.FC<ItemContentTVProps> = React.memo(
     // Episode thumbnail URL - episode's own primary image (16:9 for episodes)
     const episodeThumbnailUrl = useMemo(() => {
       if (item?.Type !== "Episode" || !api) return null;
-      return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=700&quality=80`;
+      return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=700&quality=${TV_IMAGE_QUALITY}`;
     }, [api, item]);
 
     // Series thumb URL - used when showSeriesPosterOnEpisode setting is enabled
@@ -614,10 +615,10 @@ export const ItemContentTV: React.FC<ItemContentTVProps> = React.memo(
         item.ParentBackdropItemId &&
         parentBackdropTag
       ) {
-        return `${api.basePath}/Items/${item.ParentBackdropItemId}/Images/Backdrop?fillHeight=700&quality=80&tag=${parentBackdropTag}`;
+        return `${api.basePath}/Items/${item.ParentBackdropItemId}/Images/Backdrop?fillHeight=700&quality=${TV_IMAGE_QUALITY}&tag=${parentBackdropTag}`;
       }
       if (!item.SeriesId) return null;
-      return `${api.basePath}/Items/${item.SeriesId}/Images/Thumb?fillHeight=700&quality=80`;
+      return `${api.basePath}/Items/${item.SeriesId}/Images/Thumb?fillHeight=700&quality=${TV_IMAGE_QUALITY}`;
     }, [api, item]);
 
     // Navigation handlers

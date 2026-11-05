@@ -3,6 +3,7 @@ import React from "react";
 import { Animated, Pressable, View } from "react-native";
 import { Image } from "@/components/common/ServerImage";
 import { Text } from "@/components/common/Text";
+import { TV_IMAGE_QUALITY } from "@/constants/Images";
 import { useScaledTVTypography } from "@/constants/TVTypography";
 import { scaleSize } from "@/utils/scaleSize";
 import { useTVFocusAnimation } from "./hooks/useTVFocusAnimation";
@@ -25,7 +26,7 @@ export const TVActorCard = React.forwardRef<View, TVActorCardProps>(
       useTVFocusAnimation();
 
     const imageUrl = person.Id
-      ? `${apiBasePath}/Items/${person.Id}/Images/Primary?fillWidth=280&fillHeight=280&quality=90`
+      ? `${apiBasePath}/Items/${person.Id}/Images/Primary?fillWidth=280&fillHeight=280&quality=${TV_IMAGE_QUALITY}`
       : null;
 
     return (

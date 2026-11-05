@@ -23,6 +23,7 @@ import { ProgressBar } from "@/components/common/ProgressBar";
 import { Image, prefetchServerImage } from "@/components/common/ServerImage";
 import { Text } from "@/components/common/Text";
 import { getItemNavigation } from "@/components/common/TouchableItemRouter";
+import { TV_IMAGE_QUALITY } from "@/constants/Images";
 import {
   type ScaledTVSizes,
   TV_BACKDROP_DEBOUNCE_MS,
@@ -73,31 +74,31 @@ const HeroCard: React.FC<HeroCardProps> = React.memo(
       // Matched pair: ParentThumbItemId owns the Thumb tag, not ParentBackdropItemId.
       if (item.Type === "Episode") {
         if (item.ParentThumbItemId && item.ParentThumbImageTag) {
-          return `${api.basePath}/Items/${item.ParentThumbItemId}/Images/Thumb?fillHeight=400&quality=80&tag=${item.ParentThumbImageTag}`;
+          return `${api.basePath}/Items/${item.ParentThumbItemId}/Images/Thumb?fillHeight=400&quality=${TV_IMAGE_QUALITY}&tag=${item.ParentThumbImageTag}`;
         }
         // Series without a Thumb: fall back to its backdrop, like other Jellyfin
         // clients do. The tagless Thumb request below 404s in that case.
         const parentBackdropTag = item.ParentBackdropImageTags?.[0];
         if (item.ParentBackdropItemId && parentBackdropTag) {
-          return `${api.basePath}/Items/${item.ParentBackdropItemId}/Images/Backdrop?fillHeight=400&quality=80&tag=${parentBackdropTag}`;
+          return `${api.basePath}/Items/${item.ParentBackdropItemId}/Images/Backdrop?fillHeight=400&quality=${TV_IMAGE_QUALITY}&tag=${parentBackdropTag}`;
         }
         // Neither parent pair resolved. The tagless series request below is a
         // 404 whenever the series has no Thumb, which leaves the hero blank, so
         // try the episode's own image first like the poster cards do.
         if (item.ImageTags?.Primary) {
-          return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=400&quality=80&tag=${item.ImageTags.Primary}`;
+          return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=400&quality=${TV_IMAGE_QUALITY}&tag=${item.ImageTags.Primary}`;
         }
         if (item.SeriesId) {
-          return `${api.basePath}/Items/${item.SeriesId}/Images/Thumb?fillHeight=400&quality=80`;
+          return `${api.basePath}/Items/${item.SeriesId}/Images/Thumb?fillHeight=400&quality=${TV_IMAGE_QUALITY}`;
         }
       }
 
       // For non-episodes, use item's own thumb/primary
       if (item.ImageTags?.Thumb) {
-        return `${api.basePath}/Items/${item.Id}/Images/Thumb?fillHeight=400&quality=80&tag=${item.ImageTags.Thumb}`;
+        return `${api.basePath}/Items/${item.Id}/Images/Thumb?fillHeight=400&quality=${TV_IMAGE_QUALITY}&tag=${item.ImageTags.Thumb}`;
       }
       if (item.ImageTags?.Primary) {
-        return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=400&quality=80&tag=${item.ImageTags.Primary}`;
+        return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=400&quality=${TV_IMAGE_QUALITY}&tag=${item.ImageTags.Primary}`;
       }
       return null;
     }, [api, item]);

@@ -36,3 +36,16 @@ export const CARD_IMAGE_WIDTH_STEP_PX = 100;
  * planned for: a poster this wide already decodes to almost 4 MB.
  */
 export const MAX_CARD_IMAGE_WIDTH_PX = 800;
+
+/**
+ * JPEG quality of TV artwork. A TV stick draws at 1080p and a large screen
+ * then scales that up, so the blocks of quality 80 showed on a 75 inch set.
+ */
+export const TV_IMAGE_QUALITY = 95;
+
+/**
+ * How many times its on-screen size a TV card's artwork is asked for. Scaled
+ * down by the stick it keeps edges crisp; at 1x the server's own resize was
+ * all the sharpness there was.
+ */
+export const TV_IMAGE_OVERSAMPLE = 1.5;

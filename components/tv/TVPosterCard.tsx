@@ -18,6 +18,7 @@ import {
   WatchedIndicator,
 } from "@/components/WatchedIndicator";
 import { Colors } from "@/constants/Colors";
+import { TV_IMAGE_QUALITY } from "@/constants/Images";
 import { useScaledTVPosterSizes } from "@/constants/TVPosterSizes";
 import { useScaledTVTypography } from "@/constants/TVTypography";
 import {
@@ -26,6 +27,7 @@ import {
 } from "@/modules/glass-poster";
 import { apiAtom } from "@/providers/JellyfinProvider";
 import { getPrimaryImageUrl } from "@/utils/jellyfin/image/getPrimaryImageUrl";
+import { tvImageWidth } from "@/utils/jellyfin/image/tvImage";
 import { isLiveBroadcast } from "@/utils/jellyfin/media/isLiveBroadcast";
 import { scaleSize } from "@/utils/scaleSize";
 import { runtimeTicksToMinutes } from "@/utils/time";
@@ -162,30 +164,30 @@ const TVPosterCardComponent: React.FC<TVPosterCardProps> = ({
       if (item.Type === "Episode") {
         // Opt-in: use the episode's own image instead of the series thumb.
         if (preferEpisodeImage && item.ImageTags?.Primary) {
-          return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=600&quality=80&tag=${item.ImageTags.Primary}`;
+          return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=600&quality=${TV_IMAGE_QUALITY}&tag=${item.ImageTags.Primary}`;
         }
         // First try parent/series thumb (horizontal series artwork).
         // Matched pair: ParentThumbItemId owns the Thumb tag, not ParentBackdropItemId.
         if (item.ParentThumbItemId && item.ParentThumbImageTag) {
-          return `${api.basePath}/Items/${item.ParentThumbItemId}/Images/Thumb?fillHeight=700&quality=80&tag=${item.ParentThumbImageTag}`;
+          return `${api.basePath}/Items/${item.ParentThumbItemId}/Images/Thumb?fillHeight=700&quality=${TV_IMAGE_QUALITY}&tag=${item.ParentThumbImageTag}`;
         }
         const parentBackdropTag = item.ParentBackdropImageTags?.[0];
         if (item.ParentBackdropItemId && parentBackdropTag) {
-          return `${api.basePath}/Items/${item.ParentBackdropItemId}/Images/Backdrop?fillHeight=700&quality=80&tag=${parentBackdropTag}`;
+          return `${api.basePath}/Items/${item.ParentBackdropItemId}/Images/Backdrop?fillHeight=700&quality=${TV_IMAGE_QUALITY}&tag=${parentBackdropTag}`;
         }
         // Fall back to episode's own primary image
         if (item.ImageTags?.Primary) {
-          return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=600&quality=80&tag=${item.ImageTags.Primary}`;
+          return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=600&quality=${TV_IMAGE_QUALITY}&tag=${item.ImageTags.Primary}`;
         }
         // Last resort: try primary without tag
-        return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=700&quality=80`;
+        return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=700&quality=${TV_IMAGE_QUALITY}`;
       }
 
       // Movie/Series/Program: prefer thumb over primary
       if (item.ImageTags?.Thumb) {
-        return `${api.basePath}/Items/${item.Id}/Images/Thumb?fillHeight=700&quality=80&tag=${item.ImageTags.Thumb}`;
+        return `${api.basePath}/Items/${item.Id}/Images/Thumb?fillHeight=700&quality=${TV_IMAGE_QUALITY}&tag=${item.ImageTags.Thumb}`;
       }
-      return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=700&quality=80`;
+      return `${api.basePath}/Items/${item.Id}/Images/Primary?fillHeight=700&quality=${TV_IMAGE_QUALITY}`;
     }
 
     // Vertical orientation: use primary image
@@ -195,13 +197,14 @@ const TVPosterCardComponent: React.FC<TVPosterCardProps> = ({
       item.SeriesId &&
       item.SeriesPrimaryImageTag
     ) {
-      return `${api.basePath}/Items/${item.SeriesId}/Images/Primary?fillHeight=${width * 3}&quality=80&tag=${item.SeriesPrimaryImageTag}`;
+      return `${api.basePath}/Items/${item.SeriesId}/Images/Primary?fillHeight=${Math.round(tvImageWidth(width) * 1.5)}&quality=${TV_IMAGE_QUALITY}&tag=${item.SeriesPrimaryImageTag}`;
     }
 
     return getPrimaryImageUrl({
       api,
       item,
-      width: width * 2, // 2x for quality on large screens
+      width: tvImageWidth(width),
+      quality: TV_IMAGE_QUALITY,
     });
   }, [api, item, orientation, width, imageUrlGetter, preferEpisodeImage]);
 

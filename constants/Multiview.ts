@@ -78,3 +78,6 @@ export const MULTIVIEW_TILE_CACHE = {
   maxBytes: 50,
   maxBackBytes: 25,
 } as const;
+
+/** Size, in points, of a multiview toolbar button on a TV. */
+export const MULTIVIEW_TV_TOOLBAR_BUTTON = 56;

@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { MultiviewColors } from "@/constants/Colors";
 import { QueryWrapper } from "@/test-utils/queryWrapper";
 
 type Handler<T> = (e: { nativeEvent: T }) => void;
@@ -441,5 +442,61 @@ describe("tile controls", () => {
     mockMediaSource.MediaStreams = streams;
     const [options] = mockShowActionSheet.mock.calls[0];
     expect(options.title).toBe("multiview.no_captions");
+  });
+});
+
+describe("with a TV remote", () => {
+  test("a focused tile draws a white ring, apart from the green heard one", async () => {
+    const onFocusChange = jest.fn();
+    await render(
+      <QueryWrapper>
+        <MultiviewTile
+          itemId={mockItem.Id}
+          frame={{ left: 0, top: 0, width: 320, height: 180 }}
+          muted
+          heard={false}
+          showLabel
+          onPress={jest.fn()}
+          onLongPress={jest.fn()}
+          onFocusChange={onFocusChange}
+        />
+      </QueryWrapper>,
+    );
+    const target = screen.getByTestId("multiview-tile-target");
+    await fireEvent(target, "focus");
+    expect(screen.getByTestId("multiview-tile")).toHaveStyle({
+      borderColor: MultiviewColors.focusRing,
+    });
+    expect(onFocusChange).toHaveBeenLastCalledWith(true);
+    await fireEvent(target, "blur");
+    expect(onFocusChange).toHaveBeenLastCalledWith(false);
+  });
+
+  test("the ring goes with the labels, so a tile left focused shows no border", async () => {
+    await renderTile(false);
+    await fireEvent(screen.getByTestId("multiview-tile-target"), "focus");
+    expect(screen.getByTestId("multiview-tile")).not.toHaveStyle({
+      borderColor: MultiviewColors.focusRing,
+    });
+  });
+
+  test("Up goes to the toolbar, which sits inside the tile, not above it", async () => {
+    await render(
+      <QueryWrapper>
+        <MultiviewTile
+          itemId={mockItem.Id}
+          frame={{ left: 0, top: 0, width: 320, height: 180 }}
+          muted
+          heard={false}
+          showLabel
+          onPress={jest.fn()}
+          onLongPress={jest.fn()}
+          nextFocusUp={42}
+        />
+      </QueryWrapper>,
+    );
+    expect(screen.getByTestId("multiview-tile-target").props.nextFocusUp).toBe(
+      42,
+    );
   });
 });

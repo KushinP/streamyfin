@@ -84,6 +84,12 @@ export type VideoSource = {
   };
   /** MPV video output driver (Android only) */
   voDriver?: "gpu-next" | "gpu";
+  /**
+   * A multiview tile (ExoPlayer, Android TV): it leaves audio focus alone,
+   * since each new tile would take it and pause the others, and decodes its
+   * audio to PCM so muting it works. MPV ignores it.
+   */
+  multiview?: boolean;
 };
 
 export type MpvPlayerViewProps = {

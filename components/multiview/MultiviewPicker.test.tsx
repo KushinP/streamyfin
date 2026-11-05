@@ -39,6 +39,8 @@ jest.mock("@/components/common/Input", () => ({
   Input: jest.requireActual("react-native").TextInput,
 }));
 
+import { Platform } from "react-native";
+import { MultiviewColors } from "@/constants/Colors";
 import { MultiviewPicker } from "./MultiviewPicker";
 
 const items = (...list: object[]) => Promise.resolve({ data: { Items: list } });
@@ -141,4 +143,51 @@ test("a search on the Media tab that finds nothing says so", async () => {
   await waitFor(() =>
     expect(screen.getByText("multiview.no_matches:zzz")).toBeTruthy(),
   );
+});
+
+describe("with a TV remote", () => {
+  beforeEach(() => {
+    jest.spyOn(Platform, "isTV", "get").mockReturnValue(true);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  test("the dimmed side can't take focus: selecting it would close the picker", async () => {
+    await renderPicker();
+    await screen.findByText("WBZ-DT");
+    expect(
+      screen.getByTestId("multiview-picker-backdrop").props.focusable,
+    ).toBe(false);
+  });
+
+  test("starts on the first channel, and a focused row stands out", async () => {
+    await renderPicker();
+    await screen.findByText("WBZ-DT");
+    const first = screen.getByTestId("multiview-pick-c-1");
+    expect(first.props.hasTVPreferredFocus).toBe(true);
+    expect(
+      screen.getByTestId("multiview-pick-c-2").props.hasTVPreferredFocus,
+    ).toBe(false);
+    await fireEvent(first, "focus");
+    expect(first).toHaveStyle({ backgroundColor: MultiviewColors.focused });
+  });
+
+  test("starts on the first channel not already on screen", async () => {
+    await render(
+      <QueryWrapper>
+        <MultiviewPicker
+          visible
+          onScreen={["c-1"]}
+          onPick={jest.fn()}
+          onClose={jest.fn()}
+        />
+      </QueryWrapper>,
+    );
+    await screen.findByText("WBZ-DT");
+    expect(
+      screen.getByTestId("multiview-pick-c-1").props.hasTVPreferredFocus,
+    ).toBe(false);
+    expect(
+      screen.getByTestId("multiview-pick-c-2").props.hasTVPreferredFocus,
+    ).toBe(true);
+  });
 });

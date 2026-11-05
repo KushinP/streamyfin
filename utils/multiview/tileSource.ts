@@ -52,6 +52,7 @@ export const buildTileSource = (
     url: stream.url,
     startPosition,
     autoplay: true,
+    multiview: true,
     cacheConfig: { ...MULTIVIEW_TILE_CACHE },
     ...(Object.keys(withLanguage).length > 0 && { headers: withLanguage }),
     ...(externalSubtitles.length > 0 && { externalSubtitles }),

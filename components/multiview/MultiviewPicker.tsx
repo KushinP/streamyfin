@@ -6,12 +6,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Pressable, ScrollView, View } from "react-native";
+import { Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Input } from "@/components/common/Input";
 import { ItemImage } from "@/components/common/ItemImage";
 import { Text } from "@/components/common/Text";
 import { Loader } from "@/components/Loader";
+import { MultiviewColors } from "@/constants/Colors";
 import {
   MULTIVIEW_PICKER_WIDTH,
   MULTIVIEW_RESUME_LIMIT,
@@ -23,6 +24,7 @@ import {
   filterChannels,
   type MultiviewPickerTab,
 } from "@/utils/multiview/picker";
+import { useFocused } from "./useFocused";
 
 interface Props {
   visible: boolean;
@@ -127,17 +129,32 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
     () => filterChannels(channels.data ?? [], trimmedQuery),
     [channels.data, trimmedQuery],
   );
+  const firstShownChannel = shownChannels.find(
+    (c) => c.Id && !onScreen.includes(c.Id),
+  )?.Id;
 
-  const row = (item: BaseItemDto, subtitle?: string | null) => {
+  // Where a remote starts: the first row that can still be added. A row
+  // already on screen is disabled and cannot take focus.
+  const firstAddable = (list: BaseItemDto[] | undefined) =>
+    list?.find((i) => i.Id && !onScreen.includes(i.Id))?.Id;
+
+  const row = (
+    item: BaseItemDto,
+    subtitle?: string | null,
+    preferredId?: string,
+  ) => {
     const added = !!item.Id && onScreen.includes(item.Id);
     return (
-      <Pressable
+      <PickerRow
         key={item.Id}
+        testID={`multiview-pick-${item.Id}`}
         disabled={added || !item.Id}
         onPress={() => item.Id && onPick(item.Id)}
-        className='flex flex-row items-center px-4 py-2'
-        style={{ opacity: added ? 0.4 : 1 }}
-        accessibilityRole='button'
+        // A remote starts here, not on the dimmed side.
+        hasTVPreferredFocus={
+          Platform.isTV && !!item.Id && item.Id === preferredId
+        }
+        dimmed={added}
       >
         <View className='mr-3 rounded-lg overflow-hidden'>
           <ItemImage
@@ -164,7 +181,7 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
         ) : (
           <Ionicons name='add-circle-outline' size={22} color='white' />
         )}
-      </Pressable>
+      </PickerRow>
     );
   };
 
@@ -194,7 +211,7 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
       // older search, so it is not shown.
       if (debouncedQuery !== trimmedQuery || search.isLoading) return spinner;
       if (search.data?.length === 0) return noMatches;
-      return search.data?.map((i) => row(i));
+      return search.data?.map((i) => row(i, null, firstAddable(search.data)));
     }
     if (resume.isLoading) return spinner;
     if (resume.data?.length === 0)
@@ -204,7 +221,7 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
         <Text className='px-4 pt-2 pb-2 text-neutral-400 uppercase text-xs'>
           {t("multiview.continue_watching")}
         </Text>
-        {resume.data?.map((i) => row(i))}
+        {resume.data?.map((i) => row(i, null, firstAddable(resume.data)))}
       </>
     );
   };
@@ -219,8 +236,12 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
     >
       <View className='flex-1 flex-row'>
         <Pressable
+          testID='multiview-picker-backdrop'
           className='flex-1'
           onPress={onClose}
+          // On TV it would take focus first, and select would close the
+          // picker; Back closes it there.
+          focusable={!Platform.isTV}
           accessibilityLabel={t("multiview.close_picker")}
         />
         <View
@@ -235,14 +256,14 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
         >
           <View className='flex flex-row items-center justify-between px-4 mb-3'>
             <Text className='text-lg font-bold'>{t("multiview.add_tile")}</Text>
-            <Pressable
+            <PickerRow
               onPress={onClose}
               hitSlop={8}
-              accessibilityRole='button'
+              compact
               accessibilityLabel={t("multiview.close_picker")}
             >
               <Ionicons name='close' size={24} color='white' />
-            </Pressable>
+            </PickerRow>
           </View>
           <View className='px-4'>
             <Input
@@ -266,14 +287,10 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
             {(["tv", "media"] as const).map((option) => {
               const selected = option === tab;
               return (
-                <Pressable
+                <PickerTab
                   key={option}
-                  accessibilityRole='tab'
-                  accessibilityState={{ selected }}
+                  selected={selected}
                   onPress={() => setTab(option)}
-                  className={`flex-1 items-center py-1.5 rounded-lg ${
-                    selected ? "bg-neutral-600" : ""
-                  }`}
                 >
                   <Text
                     numberOfLines={1}
@@ -283,7 +300,7 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
                   >
                     {t(TAB_LABEL_KEYS[option])}
                   </Text>
-                </Pressable>
+                </PickerTab>
               );
             })}
           </View>
@@ -294,7 +311,9 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
               data={shownChannels}
               keyExtractor={(c, i) => c.Id ?? String(i)}
               keyboardShouldPersistTaps='handled'
-              renderItem={({ item: c }) => row(c, c.CurrentProgram?.Name)}
+              renderItem={({ item: c }) =>
+                row(c, c.CurrentProgram?.Name, firstShownChannel)
+              }
             />
           ) : (
             <ScrollView keyboardShouldPersistTaps='handled'>
@@ -304,5 +323,68 @@ export function MultiviewPicker({ visible, onScreen, onPick, onClose }: Props) {
         </View>
       </View>
     </Modal>
+  );
+}
+
+/** A picker row or button that shows when the TV remote is on it. */
+function PickerRow({
+  children,
+  dimmed,
+  compact,
+  ...props
+}: React.ComponentProps<typeof Pressable> & {
+  children: React.ReactNode;
+  dimmed?: boolean;
+  compact?: boolean;
+}) {
+  const { focused, onFocus, onBlur } = useFocused();
+  return (
+    <Pressable
+      {...props}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      accessibilityRole='button'
+      className={
+        compact ? "rounded-full p-1" : "flex flex-row items-center px-4 py-2"
+      }
+      style={{
+        opacity: dimmed ? 0.4 : 1,
+        backgroundColor: focused ? MultiviewColors.focused : "transparent",
+      }}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+/** One of the picker's Live TV / Media tabs. */
+function PickerTab({
+  selected,
+  onPress,
+  children,
+}: {
+  selected: boolean;
+  onPress: () => void;
+  children: React.ReactNode;
+}) {
+  const { focused, onFocus, onBlur } = useFocused();
+  return (
+    <Pressable
+      accessibilityRole='tab'
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      className={`flex-1 items-center py-1.5 rounded-lg ${
+        selected ? "bg-neutral-600" : ""
+      }`}
+      style={
+        focused
+          ? { borderWidth: 2, borderColor: MultiviewColors.focusRing }
+          : undefined
+      }
+    >
+      {children}
+    </Pressable>
   );
 }

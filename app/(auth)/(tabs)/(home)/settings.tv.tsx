@@ -892,6 +892,7 @@ export default function SettingsTV() {
 
           {isMultiviewAvailable(Platform) && (
             <TVSettingsOptionButton
+              disabledByAdmin={pluginSettings?.multiviewMaxBitrate?.locked}
               label={t("home.settings.other.multiview_quality")}
               value={multiviewBitrate.key}
               onPress={() =>

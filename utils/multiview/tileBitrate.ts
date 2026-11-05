@@ -1,4 +1,5 @@
-import { BITRATES, type Bitrate } from "@/components/BitrateSelector";
+// Type only: the selector module loads its dropdown, native code and all.
+import type { Bitrate } from "@/components/BitrateSelector";
 import type { Settings } from "@/utils/atoms/settings";
 
 /**
@@ -7,8 +8,10 @@ import type { Settings } from "@/utils/atoms/settings";
  * them stalled side by side on a Fire TV while library items played on;
  * capped, the server sends a lighter stream.
  */
-export const DEFAULT_MULTIVIEW_BITRATE: Bitrate =
-  BITRATES.find((b) => b.value === 8_000_000) ?? BITRATES[0];
+export const DEFAULT_MULTIVIEW_BITRATE: Bitrate = {
+  key: "8 Mb/s",
+  value: 8_000_000,
+};
 
 /**
  * The most a multiview tile streams at, in bits per second (undefined for no

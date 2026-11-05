@@ -203,7 +203,10 @@ export const PlaybackControlsSettings: React.FC = () => {
         </ListItem>
 
         {isMultiviewAvailable(Platform) && (
-          <ListItem title={t("home.settings.other.multiview_quality")}>
+          <ListItem
+            title={t("home.settings.other.multiview_quality")}
+            disabled={pluginSettings?.multiviewMaxBitrate?.locked}
+          >
             <PlatformDropdown
               groups={multiviewQualityOptions}
               trigger={

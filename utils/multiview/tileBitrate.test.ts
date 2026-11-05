@@ -29,4 +29,10 @@ describe("tileMaxBitrate", () => {
     const one = BITRATES.find((b) => b.key === "1 Mb/s");
     expect(tileMaxBitrate({ defaultBitrate: one })).toBe(8_000_000);
   });
+
+  test("its default is one of the choices the settings offer", () => {
+    expect(BITRATES).toContainEqual(
+      expect.objectContaining(DEFAULT_MULTIVIEW_BITRATE),
+    );
+  });
 });

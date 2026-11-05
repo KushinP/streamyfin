@@ -18,7 +18,7 @@ bun run android:tv
 | Home screen rows | The Fire TV launcher does not show Android TV preview channels. Publishing is skipped when the device declares `amazon.hardware.fire_tv`. | `modules/tv-recommendations/.../TvRecommendationsPublisher.kt` |
 | Launcher banner | `assets/images/tv-banner.png` (320×180), set as `androidTVBanner` for `@react-native-tvos/config-tv`, for Android TV and Fire TV. Re-render with `assets/brand/render-icons.swift`. | `app.json` |
 | Home backdrop | Asks for 1280 px at quality 70 instead of 1920 px at 90 when the device has under 1.5 GB of memory (the Stick Lite and HD have about 1 GB). | `utils/tvBackdropRequest.ts`, `constants/TVSizes.ts` |
-| Multiview | Off, as on every TV and every Android device: `MpvOwnership.kt` allows one renderer per process. | `utils/multiview/availability.ts` |
+| Multiview | On, from Live TV's Multiview button: tiles play on ExoPlayer, since `MpvOwnership.kt` allows one MPV renderer per process. Up to 4 tiles; live channels are limited by the server's tuners. | `utils/multiview/availability.ts` |
 | Touch | None. `@react-native-tvos/config-tv` marks the touchscreen as not required, so the Appstore does not filter Fire TV out. Every screen must work with the D-pad alone. | generated `AndroidManifest.xml` |
 
 Focus, modals and lists follow `docs/conventions/tv.md` and `docs/tv-focus-guide.md` unchanged. On Fire TV, check that Back from Home leaves the app (Amazon reviews this), and that the remote's Play/Pause, Rewind and Fast-forward keys reach the player.

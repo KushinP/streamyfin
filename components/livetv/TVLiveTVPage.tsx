@@ -2,7 +2,7 @@ import { getLiveTvApi } from "@jellyfin/sdk/lib/utils/api";
 import { useAtomValue } from "jotai";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, View } from "react-native";
+import { Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/common/Text";
 import { InfiniteScrollingCollectionList } from "@/components/home/InfiniteScrollingCollectionList.tv";
@@ -11,7 +11,9 @@ import { TVLiveTVGuide } from "@/components/livetv/TVLiveTVGuide";
 import { TVLiveTVPlaceholder } from "@/components/livetv/TVLiveTVPlaceholder";
 import { TVTabButton } from "@/components/tv/TVTabButton";
 import { useScaledTVTypography } from "@/constants/TVTypography";
+import useRouter from "@/hooks/useAppRouter";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
+import { isMultiviewAvailable } from "@/utils/multiview/availability";
 
 const HORIZONTAL_PADDING = 60;
 const TOP_PADDING = 100;
@@ -41,6 +43,7 @@ const TABS: Tab[] = [
 
 export const TVLiveTVPage: React.FC = () => {
   const { t } = useTranslation();
+  const router = useRouter();
   const typography = useScaledTVTypography();
   const insets = useSafeAreaInsets();
   const api = useAtomValue(apiAtom);
@@ -255,6 +258,14 @@ export const TVLiveTVPage: React.FC = () => {
               switchOnFocus={true}
             />
           ))}
+          {/* Several channels at once, on ExoPlayer (Android TV). */}
+          {isMultiviewAvailable(Platform) && (
+            <TVTabButton
+              label={t("multiview.chip")}
+              active={false}
+              onSelect={() => router.push("/multiview")}
+            />
+          )}
         </View>
       </View>
 

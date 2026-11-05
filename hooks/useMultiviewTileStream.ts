@@ -5,12 +5,14 @@ import type {
 import { getLibraryApi, getSessionApi } from "@jellyfin/sdk/lib/utils/api";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 import { PROGRESS_REPORT_INTERVAL } from "@/constants/Playback";
 import type { MpvVideoSource } from "@/modules";
 import { apiAtom, userAtom } from "@/utils/atoms/api";
 import { useSettings } from "@/utils/atoms/settings";
 import { getStreamUrl } from "@/utils/jellyfin/media/getStreamUrl";
 import { writeToLog } from "@/utils/log";
+import { multiviewEngine } from "@/utils/multiview/availability";
 import { buildTileSource, type TileStream } from "@/utils/multiview/tileSource";
 import { generateDeviceProfile } from "@/utils/profiles/native";
 import { secondsToTicks, ticksToSeconds } from "@/utils/time";
@@ -125,8 +127,12 @@ export const useMultiviewTileStream = (itemId: string) => {
           userId: user.Id,
           startTimeTicks: startTicks,
           maxStreamingBitrate: maxBitrate,
-          // Every tile renders with MPV, whatever the full player is set to.
-          deviceProfile: generateDeviceProfile({ player: "mpv", audioMode }),
+          // Every tile renders with the multiview engine (MPV, or ExoPlayer
+          // on Android TV), whatever the full player is set to.
+          deviceProfile: generateDeviceProfile({
+            player: multiviewEngine(Platform),
+            audioMode,
+          }),
         });
         if (!res?.url) {
           // A live stream can be opened on the server, holding a tuner, even

@@ -19,6 +19,7 @@ import type { TVNavBarTab } from "@/components/tv/TVNavBar";
 import { TVNavBar } from "@/components/tv/TVNavBar";
 import { Colors } from "@/constants/Colors";
 import useRouter from "@/hooks/useAppRouter";
+import { useLiveTvAvailable } from "@/hooks/useLiveTvAvailable";
 import {
   isAtTabRoot,
   isTabRoute,
@@ -59,6 +60,7 @@ function TVTabLayout() {
   const { t } = useTranslation();
   const segments = useSegments();
   const router = useRouter();
+  const liveTv = useLiveTvAvailable();
 
   const currentTab = segments.find(isTabRoute);
   const atTabRoot = isAtTabRoot(segments);
@@ -69,6 +71,7 @@ function TVTabLayout() {
         { key: "(home)", label: t("tabs.home") },
         { key: "(search)", label: t("tabs.search") },
         { key: "(favorites)", label: t("tabs.favorites") },
+        liveTv ? { key: "(livetv)", label: t("live_tv.title") } : null,
         !settings?.streamyStatsServerUrl || settings?.hideWatchlistsTab
           ? null
           : { key: "(watchlists)", label: t("watchlists.title") },
@@ -82,6 +85,7 @@ function TVTabLayout() {
       settings?.streamyStatsServerUrl,
       settings?.hideWatchlistsTab,
       settings?.showCustomMenuLinks,
+      liveTv,
       t,
     ],
   );
@@ -145,6 +149,7 @@ function TVTabLayout() {
 export default function TabLayout() {
   const { settings } = useSettings();
   const { t } = useTranslation();
+  const liveTv = useLiveTvAvailable();
 
   // Must be called before any conditional return (rules of hooks)
   useTVHomeBackHandler();
@@ -216,6 +221,17 @@ export default function TabLayout() {
                   Platform.OS === "android"
                     ? (_e) => require("@/assets/icons/heart.fill.png")
                     : (_e) => ({ sfSymbol: "heart.fill" }),
+              }}
+            />
+            <NativeTabs.Screen
+              name='(livetv)'
+              options={{
+                title: t("live_tv.title"),
+                tabBarItemHidden: !liveTv,
+                tabBarIcon:
+                  Platform.OS === "android"
+                    ? (_e) => require("@/assets/icons/tv.fill.png")
+                    : (_e) => ({ sfSymbol: "tv.fill" }),
               }}
             />
             <NativeTabs.Screen

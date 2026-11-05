@@ -5,7 +5,7 @@ import { LIVE_TV_TABS, visibleLiveTvTabs } from "./liveTvTabs";
 
 const routes = join(
   __dirname,
-  "../../app/(auth)/(tabs)/(home,libraries,search,favorites,watchlists)/livetv",
+  "../../app/(auth)/(tabs)/(home,libraries,search,favorites,watchlists,livetv)/livetv",
 );
 const lookup = (key: string) =>
   key

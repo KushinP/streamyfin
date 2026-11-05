@@ -40,4 +40,14 @@ describe("macSidebarItems", () => {
       expect(item.href).toBe(`/(auth)/(tabs)/${item.segment}`);
     }
   });
+
+  test("shows Live TV after Favorites when the user has it", () => {
+    expect(macSidebarItems({}, true).map((item) => item.segment)).toEqual([
+      "(home)",
+      "(search)",
+      "(favorites)",
+      "(livetv)",
+      "(libraries)",
+    ]);
+  });
 });

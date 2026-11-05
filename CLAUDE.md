@@ -224,9 +224,10 @@ bun run ios:install-metal-toolchain   # Fixes "missing Metal Toolchain" build er
 
 **Navigation**
 - File based routing under `app/`.
-- Tab groups: `(home)`, `(search)`, `(favorites)`, `(libraries)`, `(watchlists)`,
-  `(custom-links)`, `(settings)`. Routes shared by several tabs live in the combined
-  group `(home,libraries,search,favorites,watchlists)`.
+- Tab groups: `(home)`, `(search)`, `(favorites)`, `(livetv)`, `(libraries)`,
+  `(watchlists)`, `(custom-links)`, `(settings)`. `(livetv)` shows only when the user
+  has a Live TV library (`useLiveTvAvailable`). Routes shared by several tabs live in
+  the combined group `(home,libraries,search,favorites,watchlists,livetv)`.
 - **IMPORTANT**: use `useAppRouter` from `@/hooks/useAppRouter`, never `useRouter` or the
   static `router` from `expo-router`. The wrapper preserves offline mode across
   navigation.

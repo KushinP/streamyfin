@@ -58,6 +58,13 @@ data class VideoLoadConfig(
     val cacheSeconds: Int? = null,
     val demuxerMaxBytes: Int? = null,
     val demuxerMaxBackBytes: Int? = null,
+    /**
+     * A multiview tile, one of several players on screen: it leaves audio
+     * focus alone (each new tile would take it and pause the others) and
+     * decodes its audio to PCM, so a muted tile is silent. Passthrough
+     * bitstream ignores the player's volume.
+     */
+    val multiview: Boolean = false,
 )
 
 /**
@@ -97,8 +104,8 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
 
     /** Retained across player re-creation; see setMute. */
     private var isMuted = false
-    private val playerView: PlayerView
-    private val subtitleView: SubtitleView?
+    private lateinit var playerView: PlayerView
+    private var subtitleView: SubtitleView? = null
 
     private var currentUrl: String? = null
     // The item an audio renderer failure was already retried for.
@@ -317,8 +324,12 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
         // MATCH_PARENT — so neither Yoga nor the platform compositor (the
         // failure that originally pushed this view onto TextureView) has
         // anything to override.
+        installPlayerView(R.layout.exoplayer_player_view)
+    }
+
+    private fun installPlayerView(layout: Int) {
         playerView = LayoutInflater.from(context).inflate(
-            R.layout.exoplayer_player_view,
+            layout,
             this,
             false,
         ) as PlayerView
@@ -335,6 +346,21 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
         playerView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateVideoSurfaceLayout()
         }
+    }
+
+    /**
+     * A multiview tile draws on a TextureView: it moves and resizes with its
+     * tile, where the SurfaceView kept its old size and position and showed
+     * through in a neighbouring tile when the layout changed. Tiles give up
+     * nothing they use: TextureView's cost is SDR only and a GPU copy.
+     */
+    private fun useTextureViewForTile() {
+        if (playerView.videoSurfaceView is android.view.TextureView) return
+        removeView(playerView)
+        installPlayerView(R.layout.exoplayer_player_view_texture)
+        // A tile never overflows into its neighbour.
+        (playerView as? ViewGroup)?.clipChildren = true
+        clipChildren = true
     }
 
     /**
@@ -382,6 +408,7 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
         currentUrl = config.url
         currentLoop = config.loop
         pendingConfig = config
+        if (config.multiview && player == null) useTextureViewForTile()
         ensurePlayer(config)
         loadInternal(config)
     }
@@ -417,7 +444,44 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
                 "EAC3=${audioCaps.supportsEncoding(C.ENCODING_E_AC3)}, " +
                 "AC3=${audioCaps.supportsEncoding(C.ENCODING_AC3)})"
         )
-        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(context)
+        val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean,
+            ): androidx.media3.exoplayer.audio.AudioSink? {
+                if (!config.multiview) {
+                    return super.buildAudioSink(
+                        context,
+                        enableFloatOutput,
+                        enableAudioTrackPlaybackParams,
+                    )
+                }
+                // PCM only: a passthrough tile would play at full volume
+                // whatever its volume says, and two tiles cannot both hold
+                // the HDMI bitstream. Reporting compressed formats as
+                // unsupported makes the renderer decode them (the stick has
+                // a Dolby decoder). AudioCapabilities passed to the builder
+                // are not enough: the sink re-reads the TV's own.
+                val sink = super.buildAudioSink(
+                    context,
+                    enableFloatOutput,
+                    enableAudioTrackPlaybackParams,
+                ) ?: return null
+                return object : androidx.media3.exoplayer.audio.ForwardingAudioSink(sink) {
+                    override fun supportsFormat(format: androidx.media3.common.Format) =
+                        getFormatSupport(format) !=
+                            androidx.media3.exoplayer.audio.AudioSink.SINK_FORMAT_UNSUPPORTED
+
+                    override fun getFormatSupport(format: androidx.media3.common.Format): Int =
+                        if (format.sampleMimeType == androidx.media3.common.MimeTypes.AUDIO_RAW) {
+                            super.getFormatSupport(format)
+                        } else {
+                            androidx.media3.exoplayer.audio.AudioSink.SINK_FORMAT_UNSUPPORTED
+                        }
+                }
+            }
+        }
             .setExtensionRendererMode(
                 if (bitstreamCapable) {
                     androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
@@ -434,7 +498,9 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
                     .setUsage(C.USAGE_MEDIA)
                     .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                     .build(),
-                /* handleAudioFocus = */ true
+                // Tiles leave focus alone: each new one would take it from
+                // the others, and ExoPlayer pauses on losing it.
+                /* handleAudioFocus = */ !config.multiview
             )
             .build()
 

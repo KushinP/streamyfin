@@ -46,6 +46,14 @@ describe("buildTileSource", () => {
     expect(source.autoplay).toBe(true);
   });
 
+  test("marks itself a multiview tile, so ExoPlayer shares audio with the others", () => {
+    const source = buildTileSource(
+      { url: `${SERVER}/x`, sessionId: null, mediaSource: undefined },
+      { basePath: SERVER, accessToken: undefined },
+    );
+    expect(source.multiview).toBe(true);
+  });
+
   test("loads the server's external subtitle files, so captions can list them", () => {
     const source = buildTileSource(
       {

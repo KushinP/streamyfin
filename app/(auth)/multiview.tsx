@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AppState,
+  findNodeHandle,
   Platform,
   Pressable,
   useWindowDimensions,
@@ -18,9 +19,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/common/Text";
 import { MultiviewPicker } from "@/components/multiview/MultiviewPicker";
 import { MultiviewTile } from "@/components/multiview/MultiviewTile";
+import { useFocused } from "@/components/multiview/useFocused";
+import { MultiviewColors } from "@/constants/Colors";
 import {
   MULTIVIEW_MAX_TILES,
   MULTIVIEW_TOOLBAR_HIDE_DELAY,
+  MULTIVIEW_TV_TOOLBAR_BUTTON,
 } from "@/constants/Multiview";
 import useRouter from "@/hooks/useAppRouter";
 import { useOrientation } from "@/hooks/useOrientation";
@@ -99,6 +103,13 @@ function MultiviewScreen() {
   // Bumped by a tile's playback control, so the hide timer starts over even
   // when the press changes nothing in the multiview state.
   const [lastTouch, setLastTouch] = useState(0);
+  // With a TV remote: the toolbar stays while one of its buttons has focus,
+  // or it would vanish from under the focus and leave nothing focused.
+  const [toolbarFocused, setToolbarFocused] = useState(false);
+  // Remote focus links between the tiles and the toolbar on top of them,
+  // which Android's focus search cannot find from one another.
+  const [toolbarHandle, setToolbarHandle] = useState<number | null>(null);
+  const [firstTileHandle, setFirstTileHandle] = useState<number | null>(null);
 
   useEffect(() => {
     void lockOrientation(OrientationLock.LANDSCAPE);
@@ -118,13 +129,19 @@ function MultiviewScreen() {
   // The toolbar fades out so it does not sit over the video; any touch brings
   // it back. It stays while the picker is open.
   useEffect(() => {
-    if (!toolbarVisible || pickerOpen || state.tiles.length === 0) return;
+    if (
+      !toolbarVisible ||
+      toolbarFocused ||
+      pickerOpen ||
+      state.tiles.length === 0
+    )
+      return;
     const timer = setTimeout(
       () => setToolbarVisible(false),
       MULTIVIEW_TOOLBAR_HIDE_DELAY,
     );
     return () => clearTimeout(timer);
-  }, [toolbarVisible, pickerOpen, state, lastTouch]);
+  }, [toolbarVisible, toolbarFocused, pickerOpen, state, lastTouch]);
 
   // Keys 1 to 4 hear a tile and G switches the layout, on an iPad or the
   // Mac with a keyboard.
@@ -228,6 +245,12 @@ function MultiviewScreen() {
                 setState((s) => playNext(s, tile.key, itemId))
               }
               onRemove={() => setState((s) => removeTile(s, tile.key))}
+              // Moving between tiles with a remote brings the toolbar and
+              // the labels back, as a touch does.
+              onFocusChange={(focused) => focused && onTileInteract()}
+              hasTVPreferredFocus={Platform.isTV && i === 0}
+              nextFocusUp={toolbarHandle ?? undefined}
+              onTargetRef={i === 0 ? setFirstTileHandle : undefined}
             />
           ) : null,
         )}
@@ -239,7 +262,7 @@ function MultiviewScreen() {
         </View>
       )}
 
-      {(toolbarVisible || state.tiles.length === 0) && (
+      {(toolbarVisible || toolbarFocused || state.tiles.length === 0) && (
         <View
           className='flex flex-row items-center'
           style={{
@@ -250,18 +273,25 @@ function MultiviewScreen() {
           }}
         >
           <ToolbarButton
+            onHandle={setToolbarHandle}
+            onFocusChange={setToolbarFocused}
+            nextFocusDown={firstTileHandle ?? undefined}
             icon='add'
             label={t("multiview.add_tile")}
             disabled={full}
             onPress={() => setPickerOpen(true)}
           />
           <ToolbarButton
+            onFocusChange={setToolbarFocused}
+            nextFocusDown={firstTileHandle ?? undefined}
             icon={state.layout === "grid" ? "albums-outline" : "grid-outline"}
             label={t("multiview.change_layout")}
             disabled={state.tiles.length < 2}
             onPress={() => setState(toggleLayout)}
           />
           <ToolbarButton
+            onFocusChange={setToolbarFocused}
+            nextFocusDown={firstTileHandle ?? undefined}
             icon={state.audio === "all" ? "volume-high" : "volume-medium"}
             label={
               state.audio === "all"
@@ -272,6 +302,8 @@ function MultiviewScreen() {
             onPress={() => setState(toggleAllAudio)}
           />
           <ToolbarButton
+            onFocusChange={setToolbarFocused}
+            nextFocusDown={firstTileHandle ?? undefined}
             icon='close'
             label={t("multiview.close")}
             onPress={() => router.back()}
@@ -298,28 +330,55 @@ function ToolbarButton({
   label,
   disabled,
   onPress,
+  onFocusChange,
+  onHandle,
+  nextFocusDown,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   disabled?: boolean;
   onPress: () => void;
+  onFocusChange?: (focused: boolean) => void;
+  /** This button's view, for the tiles' Up to reach. */
+  onHandle?: (handle: number | null) => void;
+  nextFocusDown?: number;
 }) {
+  const { focused, onFocus, onBlur } = useFocused(onFocusChange);
+  // Bigger on a TV, seen from the sofa.
+  const size = Platform.isTV ? MULTIVIEW_TV_TOOLBAR_BUTTON : 40;
   return (
     <Pressable
+      ref={
+        onHandle
+          ? (view) => onHandle(view ? findNodeHandle(view) : null)
+          : undefined
+      }
+      nextFocusDown={nextFocusDown}
       onPress={onPress}
+      onFocus={onFocus}
+      onBlur={onBlur}
       disabled={disabled}
       hitSlop={6}
       accessibilityRole='button'
       accessibilityLabel={label}
       className='items-center justify-center rounded-full'
       style={{
-        width: 40,
-        height: 40,
-        backgroundColor: "rgba(38,38,38,0.8)",
+        width: size,
+        height: size,
+        // Focused, a button turns solid white like the TV top bar's tabs:
+        // an outline on a small dark circle was too faint across a room.
+        backgroundColor: focused
+          ? MultiviewColors.focusRing
+          : "rgba(38,38,38,0.8)",
         opacity: disabled ? 0.4 : 1,
+        transform: [{ scale: focused ? 1.12 : 1 }],
       }}
     >
-      <Ionicons name={icon} size={22} color='white' />
+      <Ionicons
+        name={icon}
+        size={Math.round(size * 0.55)}
+        color={focused ? "black" : "white"}
+      />
     </Pressable>
   );
 }

@@ -137,6 +137,12 @@ export const HomeAmbientColors = {
   scrim: "rgba(0, 0, 0, 0.45)",
 } as const;
 
+/** Multiview with a TV remote: what has focus. */
+export const MultiviewColors = {
+  focused: "rgba(255, 255, 255, 0.16)",
+  focusRing: "#FFFFFF",
+} as const;
+
 /** The Mac's own sidebar beside the tabs (components/MacSidebar.tsx). */
 export const MacSidebarColors = {
   background: "#0c0c0d",

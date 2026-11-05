@@ -5,10 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, View } from "react-native";
+import {
+  findNodeHandle,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import { Text } from "@/components/common/Text";
 import { Loader } from "@/components/Loader";
-import { Colors } from "@/constants/Colors";
+import { Colors, MultiviewColors } from "@/constants/Colors";
 import {
   MULTIVIEW_ADJACENT_EPISODES,
   MULTIVIEW_EOF_PAUSE_TOLERANCE,
@@ -17,7 +23,7 @@ import {
   MULTIVIEW_STALL_DELAY,
 } from "@/constants/Multiview";
 import { useMultiviewTileStream } from "@/hooks/useMultiviewTileStream";
-import { MpvPlayerView, type MpvPlayerViewRef } from "@/modules";
+import { ExoPlayerView, MpvPlayerView, type MpvPlayerViewRef } from "@/modules";
 import { apiAtom, userAtom } from "@/utils/atoms/api";
 import {
   applyMpvSubtitleSelection,
@@ -25,9 +31,11 @@ import {
   getExternalSubtitleUrl,
   isBurnedInSubtitle,
 } from "@/utils/jellyfin/subtitleUtils";
+import { multiviewEngine } from "@/utils/multiview/availability";
 import type { TileFrame } from "@/utils/multiview/multiview";
 import { createPlaybackStartWatch } from "@/utils/multiview/playbackStart";
 import { isAtEnd, nextEpisodeIn } from "@/utils/multiview/tilePlayback";
+import { useFocused } from "./useFocused";
 
 interface Props {
   itemId: string;
@@ -48,7 +56,23 @@ interface Props {
   onPlayNext?: (itemId: string) => void;
   /** Takes the tile off the screen. */
   onRemove?: () => void;
+  /** The TV remote's focus arrived on the tile or left it. */
+  onFocusChange?: (focused: boolean) => void;
+  /** Where a TV remote starts. */
+  hasTVPreferredFocus?: boolean;
+  /**
+   * Where Up goes with a TV remote: the toolbar sits inside the tile, not
+   * above it, so Android's own focus search never finds it.
+   */
+  nextFocusUp?: number;
+  /** The tile's focusable view, for the toolbar's Down to come back to. */
+  onTargetRef?: (handle: number | null) => void;
 }
+
+// Several players at once: MPV on iOS; on Android TV, ExoPlayer, since
+// Android's MPV allows one video per process (see isMultiviewAvailable).
+const TilePlayer =
+  multiviewEngine(Platform) === "exoplayer" ? ExoPlayerView : MpvPlayerView;
 
 export function MultiviewTile({
   itemId,
@@ -61,6 +85,10 @@ export function MultiviewTile({
   onInteract,
   onPlayNext,
   onRemove,
+  onFocusChange,
+  hasTVPreferredFocus,
+  nextFocusUp,
+  onTargetRef,
 }: Props) {
   const { t } = useTranslation();
   const { showActionSheetWithOptions } = useActionSheet();
@@ -255,8 +283,11 @@ export function MultiviewTile({
     state.item.Type !== "TvChannel";
   const next = nextEpisode.data;
 
+  const { focused, onFocus, onBlur } = useFocused(onFocusChange);
+
   return (
     <View
+      testID='multiview-tile'
       style={[
         styles.tile,
         {
@@ -265,11 +296,17 @@ export function MultiviewTile({
           width: frame.width,
           height: frame.height,
         },
-        heard && styles.heard,
+        // Like the labels, the outline goes after the toolbar's delay: left
+        // on, it framed the tile for as long as it played.
+        heard && showLabel && styles.heard,
+        // White, apart from the green of the tile being heard. It goes with
+        // the labels: with one tile the focus never leaves it, and the ring
+        // stayed on screen for good.
+        focused && showLabel && { borderColor: MultiviewColors.focusRing },
       ]}
     >
       {state.status === "ready" && (
-        <MpvPlayerView
+        <TilePlayer
           ref={setPlayer}
           source={source}
           style={StyleSheet.absoluteFill}
@@ -309,9 +346,19 @@ export function MultiviewTile({
       )}
       {/* Above the native view, which would otherwise take the touches. */}
       <Pressable
+        testID='multiview-tile-target'
+        ref={
+          onTargetRef
+            ? (view) => onTargetRef(view ? findNodeHandle(view) : null)
+            : undefined
+        }
+        nextFocusUp={nextFocusUp}
         style={StyleSheet.absoluteFill}
         onPress={onPress}
         onLongPress={onLongPress}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        hasTVPreferredFocus={hasTVPreferredFocus}
         accessibilityRole='button'
         accessibilityLabel={
           state.status === "ready" ? (state.item.Name ?? undefined) : undefined

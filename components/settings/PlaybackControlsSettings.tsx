@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type React from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { BITRATES } from "@/components/BitrateSelector";
 import { SettingSwitch } from "@/components/common/SettingSwitch";
 import { PlatformDropdown } from "@/components/PlatformDropdown";
@@ -13,6 +13,8 @@ import { STILL_WATCHING_PRESET_ORDER } from "@/constants/StillWatching";
 import useRouter from "@/hooks/useAppRouter";
 import * as ScreenOrientation from "@/packages/expo-screen-orientation";
 import { ScreenOrientationEnum, useSettings } from "@/utils/atoms/settings";
+import { isMultiviewAvailable } from "@/utils/multiview/availability";
+import { DEFAULT_MULTIVIEW_BITRATE } from "@/utils/multiview/tileBitrate";
 import { coerceStillWatchingPreset } from "@/utils/stillWatching";
 import { Text } from "../common/Text";
 import { ListGroup } from "../list/ListGroup";
@@ -84,6 +86,23 @@ export const PlaybackControlsSettings: React.FC = () => {
       },
     ],
     [settings?.defaultBitrate?.key, updateSettings],
+  );
+
+  const multiviewBitrate =
+    settings?.multiviewMaxBitrate ?? DEFAULT_MULTIVIEW_BITRATE;
+  const multiviewQualityOptions = useMemo(
+    () => [
+      {
+        options: BITRATES.map((bitrate) => ({
+          type: "radio" as const,
+          label: bitrate.key,
+          value: bitrate.key,
+          selected: bitrate.key === multiviewBitrate.key,
+          onPress: () => updateSettings({ multiviewMaxBitrate: bitrate }),
+        })),
+      },
+    ],
+    [multiviewBitrate.key, updateSettings],
   );
 
   const stillWatchingOptions = useMemo(
@@ -182,6 +201,30 @@ export const PlaybackControlsSettings: React.FC = () => {
             title={t("home.settings.other.default_quality")}
           />
         </ListItem>
+
+        {isMultiviewAvailable(Platform) && (
+          <ListItem
+            title={t("home.settings.other.multiview_quality")}
+            disabled={pluginSettings?.multiviewMaxBitrate?.locked}
+          >
+            <PlatformDropdown
+              groups={multiviewQualityOptions}
+              trigger={
+                <View className='flex flex-row items-center justify-between pl-3 py-1.5 '>
+                  <Text className='mr-1 text-[#8E8D91]'>
+                    {multiviewBitrate.key}
+                  </Text>
+                  <Ionicons
+                    name='chevron-expand-sharp'
+                    size={18}
+                    color='#5A5960'
+                  />
+                </View>
+              }
+              title={t("home.settings.other.multiview_quality")}
+            />
+          </ListItem>
+        )}
 
         <ListItem
           title={t("home.settings.other.default_playback_speed")}

@@ -1,5 +1,6 @@
 import type { Ionicons } from "@expo/vector-icons";
 import type { Settings } from "@/utils/atoms/settings";
+import { LIVE_TV_TAB_HREF } from "@/utils/liveTv";
 
 export type MacSidebarItem = {
   /** The tab group's route segment, as useSegments() reports it. */
@@ -15,12 +16,7 @@ const tab = (
   icon: MacSidebarItem["icon"],
 ): MacSidebarItem => ({
   segment,
-  // Live TV's group has no page of its own: a bare /(livetv) falls through
-  // to the Library's [libraryId] route (see tabRootHref).
-  href:
-    segment === "(livetv)"
-      ? "/(auth)/(tabs)/(livetv)/livetv"
-      : `/(auth)/(tabs)/${segment}`,
+  href: segment === "(livetv)" ? LIVE_TV_TAB_HREF : `/(auth)/(tabs)/${segment}`,
   titleKey,
   icon,
 });

@@ -55,7 +55,9 @@ describe("the Live TV tab", () => {
   test("opens at the Live TV screen: the bare group has no page", () => {
     // /(auth)/(tabs)/(livetv) alone falls through to the Library's
     // [libraryId] route.
-    expect(tabRootHref("(livetv)")).toBe("/(auth)/(tabs)/(livetv)/livetv");
+    expect(tabRootHref("(livetv)")).toBe(
+      "/(auth)/(tabs)/(livetv)/livetv/programs",
+    );
     expect(tabRootHref("(home)")).toBe("/(auth)/(tabs)/(home)");
   });
 });

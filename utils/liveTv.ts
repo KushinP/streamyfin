@@ -13,3 +13,11 @@ export const hasLiveTv = (
       view.CollectionType === "livetv" &&
       !hiddenLibraries?.includes(view.Id ?? ""),
   );
+
+/**
+ * Where the Live TV tab opens: the programs page, which on TV is the whole
+ * Live TV screen (title and its own tabs) and on the phone the first top tab.
+ * The bare group has no page (it falls through to the Library's [libraryId]
+ * route) and a bare /livetv lands on the guide without its header.
+ */
+export const LIVE_TV_TAB_HREF = "/(auth)/(tabs)/(livetv)/livetv/programs";

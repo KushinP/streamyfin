@@ -1,6 +1,7 @@
 import { useSegments } from "expo-router";
 import { useEffect } from "react";
 import { Platform } from "react-native";
+import { LIVE_TV_TAB_HREF } from "@/utils/liveTv";
 import {
   disableTVMenuKeyInterception,
   enableTVMenuKeyInterception,
@@ -43,13 +44,10 @@ export function isAtTabRoot(segments: string[]): boolean {
 
 /**
  * Where a tab opens. Most tabs open at their group; Live TV's group has no
- * page of its own, and a bare /(livetv) falls through to the Library's
- * [libraryId] route, so it opens at the Live TV screen.
+ * page of its own, so it opens at LIVE_TV_TAB_HREF.
  */
 export function tabRootHref(tab: string): string {
-  return tab === "(livetv)"
-    ? "/(auth)/(tabs)/(livetv)/livetv"
-    : `/(auth)/(tabs)/${tab}`;
+  return tab === "(livetv)" ? LIVE_TV_TAB_HREF : `/(auth)/(tabs)/${tab}`;
 }
 
 /**

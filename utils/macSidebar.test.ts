@@ -55,6 +55,6 @@ describe("macSidebarItems", () => {
     const live = macSidebarItems({}, true).find(
       (item) => item.segment === "(livetv)",
     );
-    expect(live?.href).toBe("/(auth)/(tabs)/(livetv)/livetv");
+    expect(live?.href).toBe("/(auth)/(tabs)/(livetv)/livetv/programs");
   });
 });

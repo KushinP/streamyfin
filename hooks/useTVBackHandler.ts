@@ -32,7 +32,24 @@ export function isTabRoute(s: string): s is TabRoute {
  * Check if we're at the root of a tab
  */
 export function isAtTabRoot(segments: string[]): boolean {
-  return isTabRoute(segments[segments.length - 1]);
+  if (isTabRoute(segments[segments.length - 1])) return true;
+  // The Live TV tab opens on the Live TV screen, whose own pages (programs,
+  // guide, channels, recordings) are all its root.
+  const tab = segments.indexOf("(livetv)");
+  return (
+    tab !== -1 && segments[tab + 1] === "livetv" && segments.length - tab <= 3
+  );
+}
+
+/**
+ * Where a tab opens. Most tabs open at their group; Live TV's group has no
+ * page of its own, and a bare /(livetv) falls through to the Library's
+ * [libraryId] route, so it opens at the Live TV screen.
+ */
+export function tabRootHref(tab: string): string {
+  return tab === "(livetv)"
+    ? "/(auth)/(tabs)/(livetv)/livetv"
+    : `/(auth)/(tabs)/${tab}`;
 }
 
 /**

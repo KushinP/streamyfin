@@ -15,7 +15,12 @@ const tab = (
   icon: MacSidebarItem["icon"],
 ): MacSidebarItem => ({
   segment,
-  href: `/(auth)/(tabs)/${segment}`,
+  // Live TV's group has no page of its own: a bare /(livetv) falls through
+  // to the Library's [libraryId] route (see tabRootHref).
+  href:
+    segment === "(livetv)"
+      ? "/(auth)/(tabs)/(livetv)/livetv"
+      : `/(auth)/(tabs)/${segment}`,
   titleKey,
   icon,
 });

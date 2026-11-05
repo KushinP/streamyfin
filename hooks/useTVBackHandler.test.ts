@@ -7,7 +7,7 @@ jest.mock("expo-router", () => ({
   useSegments: () => [],
 }));
 
-import { isAtTabRoot, isTabRoute } from "./useTVBackHandler";
+import { isAtTabRoot, isTabRoute, tabRootHref } from "./useTVBackHandler";
 
 describe("isAtTabRoot", () => {
   test("true at the root of a tab", () => {
@@ -38,5 +38,24 @@ describe("isTabRoute", () => {
     expect(isTabRoute("(home)")).toBe(true);
     expect(isTabRoute("(tabs)")).toBe(false);
     expect(isTabRoute("index")).toBe(false);
+  });
+});
+
+describe("the Live TV tab", () => {
+  test("its root is the Live TV screen, whichever of its pages is open", () => {
+    expect(isAtTabRoot(["(auth)", "(tabs)", "(livetv)", "livetv"])).toBe(true);
+    expect(
+      isAtTabRoot(["(auth)", "(tabs)", "(livetv)", "livetv", "guide"]),
+    ).toBe(true);
+    expect(
+      isAtTabRoot(["(auth)", "(tabs)", "(livetv)", "series", "[id]"]),
+    ).toBe(false);
+  });
+
+  test("opens at the Live TV screen: the bare group has no page", () => {
+    // /(auth)/(tabs)/(livetv) alone falls through to the Library's
+    // [libraryId] route.
+    expect(tabRootHref("(livetv)")).toBe("/(auth)/(tabs)/(livetv)/livetv");
+    expect(tabRootHref("(home)")).toBe("/(auth)/(tabs)/(home)");
   });
 });

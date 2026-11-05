@@ -23,6 +23,7 @@ import { useLiveTvAvailable } from "@/hooks/useLiveTvAvailable";
 import {
   isAtTabRoot,
   isTabRoute,
+  tabRootHref,
   useTVHomeBackHandler,
   useTVTabRootBackHandler,
 } from "@/hooks/useTVBackHandler";
@@ -104,7 +105,7 @@ function TVTabLayout() {
       if (key === "(home)") eventBus.emit("scrollToTop");
       if (key === "(search)") eventBus.emit("searchTabPressed");
 
-      router.replace(`/(auth)/(tabs)/${key}`);
+      router.replace(tabRootHref(key) as never);
     },
     [currentTab, router],
   );

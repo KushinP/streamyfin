@@ -13,6 +13,7 @@ import { useSettings } from "@/utils/atoms/settings";
 import { getStreamUrl } from "@/utils/jellyfin/media/getStreamUrl";
 import { writeToLog } from "@/utils/log";
 import { multiviewEngine } from "@/utils/multiview/availability";
+import { tileMaxBitrate } from "@/utils/multiview/tileBitrate";
 import { buildTileSource, type TileStream } from "@/utils/multiview/tileSource";
 import { generateDeviceProfile } from "@/utils/profiles/native";
 import { secondsToTicks, ticksToSeconds } from "@/utils/time";
@@ -45,9 +46,9 @@ export const useMultiviewTileStream = (itemId: string) => {
   const user = useAtomValue(userAtom);
   const { settings } = useSettings();
   const audioMode = settings?.audioTranscodeMode;
-  // The user's default cap, as the full player opens a stream with; four
-  // uncapped tiles would each ask for the source's full bitrate.
-  const maxBitrate = settings?.defaultBitrate?.value;
+  // The multiview quality: tiles at the source's full rate stalled, live
+  // channels first (tileMaxBitrate).
+  const maxBitrate = tileMaxBitrate(settings ?? {});
   const [state, setState] = useState<TileStreamState>({ status: "loading" });
   // Seconds; the stop report saves it as the resume point of a library item.
   const positionRef = useRef(0);

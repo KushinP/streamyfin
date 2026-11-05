@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { MultiviewColors } from "@/constants/Colors";
+import { Colors, MultiviewColors } from "@/constants/Colors";
 import { QueryWrapper } from "@/test-utils/queryWrapper";
 
 type Handler<T> = (e: { nativeEvent: T }) => void;
@@ -498,5 +498,29 @@ describe("with a TV remote", () => {
     expect(screen.getByTestId("multiview-tile-target").props.nextFocusUp).toBe(
       42,
     );
+  });
+
+  test("the green outline of the tile being heard goes with the labels too", async () => {
+    const tile = (showLabel: boolean) => (
+      <QueryWrapper>
+        <MultiviewTile
+          itemId={mockItem.Id}
+          frame={{ left: 0, top: 0, width: 320, height: 180 }}
+          muted={false}
+          heard
+          showLabel={showLabel}
+          onPress={jest.fn()}
+          onLongPress={jest.fn()}
+        />
+      </QueryWrapper>
+    );
+    const view = await render(tile(true));
+    expect(screen.getByTestId("multiview-tile")).toHaveStyle({
+      borderColor: Colors.primary,
+    });
+    await view.rerender(tile(false));
+    expect(screen.getByTestId("multiview-tile")).not.toHaveStyle({
+      borderColor: Colors.primary,
+    });
   });
 });

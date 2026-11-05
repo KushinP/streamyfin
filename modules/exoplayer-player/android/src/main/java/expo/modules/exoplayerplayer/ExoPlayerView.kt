@@ -104,8 +104,8 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
 
     /** Retained across player re-creation; see setMute. */
     private var isMuted = false
-    private val playerView: PlayerView
-    private val subtitleView: SubtitleView?
+    private lateinit var playerView: PlayerView
+    private var subtitleView: SubtitleView? = null
 
     private var currentUrl: String? = null
     // The item an audio renderer failure was already retried for.
@@ -324,8 +324,12 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
         // MATCH_PARENT — so neither Yoga nor the platform compositor (the
         // failure that originally pushed this view onto TextureView) has
         // anything to override.
+        installPlayerView(R.layout.exoplayer_player_view)
+    }
+
+    private fun installPlayerView(layout: Int) {
         playerView = LayoutInflater.from(context).inflate(
-            R.layout.exoplayer_player_view,
+            layout,
             this,
             false,
         ) as PlayerView
@@ -342,6 +346,21 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
         playerView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateVideoSurfaceLayout()
         }
+    }
+
+    /**
+     * A multiview tile draws on a TextureView: it moves and resizes with its
+     * tile, where the SurfaceView kept its old size and position and showed
+     * through in a neighbouring tile when the layout changed. Tiles give up
+     * nothing they use: TextureView's cost is SDR only and a GPU copy.
+     */
+    private fun useTextureViewForTile() {
+        if (playerView.videoSurfaceView is android.view.TextureView) return
+        removeView(playerView)
+        installPlayerView(R.layout.exoplayer_player_view_texture)
+        // A tile never overflows into its neighbour.
+        (playerView as? ViewGroup)?.clipChildren = true
+        clipChildren = true
     }
 
     /**
@@ -389,6 +408,7 @@ class ExoPlayerView(context: Context, appContext: AppContext) : ExpoView(context
         currentUrl = config.url
         currentLoop = config.loop
         pendingConfig = config
+        if (config.multiview && player == null) useTextureViewForTile()
         ensurePlayer(config)
         loadInternal(config)
     }

@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BITRATES } from "@/components/BitrateSelector";
 import { Text } from "@/components/common/Text";
 import { TVPasswordEntryModal } from "@/components/login/TVPasswordEntryModal";
 import { TVPINEntryModal } from "@/components/login/TVPINEntryModal";
@@ -60,6 +61,8 @@ import {
 import { INTEGRATION_CONFIG_KEY_PREFIX } from "@/utils/customHeaders";
 import { ORIGINAL_LANGUAGE } from "@/utils/jellyfin/serverVersion";
 import { storage } from "@/utils/mmkv";
+import { isMultiviewAvailable } from "@/utils/multiview/availability";
+import { DEFAULT_MULTIVIEW_BITRATE } from "@/utils/multiview/tileBitrate";
 import { scaleSize } from "@/utils/scaleSize";
 import {
   getPreviousServers,
@@ -709,6 +712,19 @@ export default function SettingsTV() {
     [t, settings.stillWatchingPreset],
   );
 
+  // Multiview's per-tile cap (Android TV multiview runs on ExoPlayer).
+  const multiviewBitrate =
+    settings.multiviewMaxBitrate ?? DEFAULT_MULTIVIEW_BITRATE;
+  const multiviewQualityOptions: TVOptionItem<string>[] = useMemo(
+    () =>
+      BITRATES.map((bitrate) => ({
+        label: bitrate.key,
+        value: bitrate.key,
+        selected: bitrate.key === multiviewBitrate.key,
+      })),
+    [multiviewBitrate.key],
+  );
+
   // Get display labels for option buttons
   const audioTranscodeLabel = useMemo(() => {
     const option = audioTranscodeModeOptions.find((o) => o.selected);
@@ -873,6 +889,23 @@ export default function SettingsTV() {
 
           {/* Video Player Section */}
           <TVSectionHeader title={t("home.settings.video_player.title")} />
+
+          {isMultiviewAvailable(Platform) && (
+            <TVSettingsOptionButton
+              label={t("home.settings.other.multiview_quality")}
+              value={multiviewBitrate.key}
+              onPress={() =>
+                showOptions({
+                  title: t("home.settings.other.multiview_quality"),
+                  options: multiviewQualityOptions,
+                  onSelect: (key) =>
+                    updateSettings({
+                      multiviewMaxBitrate: BITRATES.find((b) => b.key === key),
+                    }),
+                })
+              }
+            />
+          )}
 
           {/* Engine selector — Android TV only */}
           {isAndroidTv && (

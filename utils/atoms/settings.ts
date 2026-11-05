@@ -184,7 +184,10 @@ const normalizePluginValue = (
       // defaultBitrate needs a lookup because its keys are human-readable
       // (e.g. "8 Mb/s") that can't be derived from the raw value (e.g. 8000000).
       // Anything else falls back to a key of String(value).
-      if (settingsKey === "defaultBitrate") {
+      if (
+        settingsKey === "defaultBitrate" ||
+        settingsKey === "multiviewMaxBitrate"
+      ) {
         const match = BITRATES.find(
           (b) => b.key === value || b.value === value,
         );
@@ -423,6 +426,8 @@ export type Settings = {
   /** iOS only: show a Lock Screen / Dynamic Island Live Activity while a download runs. */
   showDownloadLiveActivity: boolean;
   defaultBitrate?: Bitrate;
+  /** The most one multiview tile streams at; see tileMaxBitrate. */
+  multiviewMaxBitrate?: Bitrate;
   libraryOptions: LibraryOptions;
   defaultAudioLanguage: CultureDto | null;
   playDefaultAudioTrack: boolean;

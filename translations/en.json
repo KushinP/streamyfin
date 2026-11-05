@@ -398,6 +398,7 @@
         "resume_dialog": "Ask to resume or start over",
         "confirm_before_stopping_playback": "Confirm before stopping playback",
         "default_quality": "Default quality",
+        "multiview_quality": "Multiview quality, per tile",
         "default_playback_speed": "Default playback speed",
         "auto_play_next_episode": "Auto-play next episode",
         "still_watching": "Ask \"Are you still watching?\"",

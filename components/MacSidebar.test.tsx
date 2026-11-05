@@ -20,8 +20,12 @@ jest.mock("@tanstack/react-query", () => ({
     data: [
       { Id: "movies", Name: "Movies", CollectionType: "movies" },
       { Id: "books", Name: "Books", CollectionType: "books" },
+      { Id: "live", Name: "Live TV", CollectionType: "livetv" },
     ],
   }),
+}));
+jest.mock("@/hooks/useLiveTvAvailable", () => ({
+  useLiveTvAvailable: () => true,
 }));
 const mockRouter = { navigate: jest.fn(), push: jest.fn() };
 jest.mock("@/hooks/useAppRouter", () => ({
@@ -56,6 +60,9 @@ describe("MacSidebar", () => {
     await render(<MacSidebar />);
     expect(screen.getByText("t:mac_sidebar.libraries")).toBeTruthy();
     expect(screen.queryByText("Books")).toBeNull();
+    // Live TV is a section of its own, not a library row.
+    expect(screen.queryByTestId("mac-sidebar-library-live")).toBeNull();
+    expect(screen.getByTestId("mac-sidebar-(livetv)")).toBeTruthy();
     fireEvent.press(screen.getByTestId("mac-sidebar-library-movies"));
     expect(mockRouter.navigate).toHaveBeenCalledWith(
       "/(auth)/(tabs)/(libraries)/movies",

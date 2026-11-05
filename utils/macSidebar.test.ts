@@ -37,7 +37,24 @@ describe("macSidebarItems", () => {
       streamyStatsServerUrl: "x",
       showCustomMenuLinks: true,
     })) {
-      expect(item.href).toBe(`/(auth)/(tabs)/${item.segment}`);
+      expect(item.href.startsWith(`/(auth)/(tabs)/${item.segment}`)).toBe(true);
     }
+  });
+
+  test("shows Live TV after Favorites when the user has it", () => {
+    expect(macSidebarItems({}, true).map((item) => item.segment)).toEqual([
+      "(home)",
+      "(search)",
+      "(favorites)",
+      "(livetv)",
+      "(libraries)",
+    ]);
+  });
+
+  test("Live TV opens at the Live TV screen, not the bare group", () => {
+    const live = macSidebarItems({}, true).find(
+      (item) => item.segment === "(livetv)",
+    );
+    expect(live?.href).toBe("/(auth)/(tabs)/(livetv)/livetv/programs");
   });
 });

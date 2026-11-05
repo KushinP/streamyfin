@@ -15,6 +15,7 @@ import { libraryIcons } from "@/components/library/LibraryItemCard";
 import { Colors, MacSidebarColors } from "@/constants/Colors";
 import { MAC_SIDEBAR_WIDTH } from "@/constants/Mac";
 import useRouter from "@/hooks/useAppRouter";
+import { useLiveTvAvailable } from "@/hooks/useLiveTvAvailable";
 import { apiAtom, userAtom } from "@/utils/atoms/api";
 import { useSettings } from "@/utils/atoms/settings";
 import { eventBus } from "@/utils/eventBus";
@@ -90,7 +91,9 @@ const useSidebarLibraries = (): BaseItemDto[] => {
     data?.filter(
       (library) =>
         !settings?.hiddenLibraries?.includes(library.Id!) &&
-        library.CollectionType !== "books",
+        library.CollectionType !== "books" &&
+        // Live TV has its own section above.
+        library.CollectionType !== "livetv",
     ) ?? []
   );
 };
@@ -110,12 +113,10 @@ export const MacSidebar = () => {
   const { settings } = useSettings();
   const insets = useSafeAreaInsets();
   const libraries = useSidebarLibraries();
+  const liveTv = useLiveTvAvailable();
   const current = segments[2];
   const openLibrary = libraries.find(
-    (library) =>
-      current === "(libraries)" &&
-      (pathname.includes(library.Id!) ||
-        (library.CollectionType === "livetv" && pathname.includes("/livetv"))),
+    (library) => current === "(libraries)" && pathname.includes(library.Id!),
   );
 
   const open = (item: MacSidebarItem) => {
@@ -146,7 +147,7 @@ export const MacSidebar = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {macSidebarItems(settings).map((item) => (
+        {macSidebarItems(settings, liveTv).map((item) => (
           <SidebarRow
             key={item.segment}
             testID={`mac-sidebar-${item.segment}`}

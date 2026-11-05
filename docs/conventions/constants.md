@@ -32,6 +32,7 @@ cadence meant knowing both existed, and nothing would have failed if only one ha
 | `constants/Colors.ts` | Colour tokens |
 | `constants/MediaTypes.ts` | Media type unions |
 | `constants/Images.ts` | Server image requests: the detail page logo height, and the pixel caps and steps on what is asked for |
+| `constants/TVNavBar.ts` | The Android TV top bar: its overscan-safe top margin, and how it slides away when focus leaves it |
 | `constants/TVSizes.ts` | TV poster sizes, gaps, padding, animation timings, how close to the end a growing grid asks for more |
 | `constants/TVTypography.ts` | TV type scale and the `useScaledTVTypography` hook |
 | `constants/TVPosterSizes.ts` | TV poster size keys |

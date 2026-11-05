@@ -71,7 +71,7 @@ merge that touched them, check that the fork kept its own values:
 | --- | --- | --- |
 | App identity | `app.json`, `app.config.ts` | bundle id `com.kushagra.superfin`, scheme `superfin://`, app name, EAS project |
 | Brand | `assets/images/`, `tailwind.config.js` | SuperFin icons and splash, green in place of purple |
-| Live TV | `app/(auth)/(tabs)/(home,libraries,search,favorites,watchlists)/livetv/`, `components/livetv/`, `utils/livetv/` | the new Live TV UI |
+| Live TV | `app/(auth)/(tabs)/(home,libraries,search,favorites,watchlists,livetv)/livetv/`, `components/livetv/`, `utils/livetv/` | the new Live TV UI |
 | Multiview | `components/multiview/`, `utils/multiview/` | fork only feature, upstream never touches it |
 | Artwork tints | `utils/ambientTint.ts`, series and item pages | the artwork tinted pages |
 | Translations | `translations/en.json` | the fork's added keys; other catalogues follow upstream's Crowdin output |

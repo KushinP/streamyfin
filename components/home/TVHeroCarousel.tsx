@@ -491,12 +491,17 @@ const TVHeroCarouselComponent: React.FC<TVHeroCarouselProps> = ({
         />
       </View>
 
-      {/* Content overlay - text elements with padding */}
+      {/* Content overlay - text elements with padding. Bounded at the top by
+          the space kept for the tab bar: on a small screen (a Fire TV stick
+          is 960 by 540) the block grew up under the tabs. Now the
+          description gives way first. */}
       <View
         style={{
           position: "absolute",
           left: sizes.padding.horizontal,
           right: sizes.padding.horizontal,
+          top: insets.top + tvosTopPadding,
+          justifyContent: "flex-end",
           bottom:
             scaleSize(40) +
             sizes.posters.episode * (9 / 16) +
@@ -553,6 +558,9 @@ const TVHeroCarouselComponent: React.FC<TVHeroCarouselProps> = ({
               marginBottom: scaleSize(16),
               maxWidth: SCREEN_WIDTH * 0.5,
               lineHeight: typography.body * 1.4,
+              flexShrink: 1,
+              minHeight: 0,
+              overflow: "hidden",
             }}
             numberOfLines={2}
           >

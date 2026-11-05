@@ -296,7 +296,9 @@ export function MultiviewTile({
           width: frame.width,
           height: frame.height,
         },
-        heard && styles.heard,
+        // Like the labels, the outline goes after the toolbar's delay: left
+        // on, it framed the tile for as long as it played.
+        heard && showLabel && styles.heard,
         // White, apart from the green of the tile being heard. It goes with
         // the labels: with one tile the focus never leaves it, and the ring
         // stayed on screen for good.

@@ -58,3 +58,12 @@ export const NATIVE_PLAYER_CLOSE_WAIT_MS = 2_000;
 
 /** How often, in ms, that wait checks whether the closing player is gone. */
 export const NATIVE_PLAYER_CLOSE_POLL_MS = 50;
+
+/**
+ * Seconds of a live channel buffered before it starts, and before it resumes
+ * after running dry. A live stream is played next to its live edge, and with
+ * mpv's default of one second an over-the-air channel ran dry at every gap in
+ * the feed and stalled, where ExoPlayer, which waits several seconds, played
+ * the same channel through. The cost is that much delay behind the broadcast.
+ */
+export const LIVE_PAUSE_WAIT_SECONDS = 5;

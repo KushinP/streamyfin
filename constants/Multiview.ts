@@ -81,3 +81,34 @@ export const MULTIVIEW_TILE_CACHE = {
 
 /** Size, in points, of a multiview toolbar button on a TV. */
 export const MULTIVIEW_TV_TOOLBAR_BUTTON = 56;
+
+/** How often, in ms, an open stats overlay asks its tile's player for numbers. */
+export const MULTIVIEW_STATS_INTERVAL = 1_000;
+
+/**
+ * Most a tile waits, in ms, for other tiles' stop reports before it opens its
+ * own stream: long enough for the server to free a tuner, short enough that a
+ * report that never answers cannot hold a tile up.
+ */
+export const MULTIVIEW_STOP_WAIT_LIMIT = 3_000;
+
+/**
+ * How long, in ms, a live tile that was playing may go without new video
+ * before it reconnects on its own. Longer than the live cushion
+ * (LIVE_PAUSE_WAIT_SECONDS), so a tile rebuilding its buffer after a short
+ * gap is left to do so.
+ */
+export const MULTIVIEW_LIVE_STALL_RECONNECT = 12_000;
+
+/**
+ * How long, in ms, a live tile may take to show its first frame before it
+ * reconnects. Generous: the server can take ten seconds or more to open a
+ * channel, answering the first requests with an error meanwhile.
+ */
+export const MULTIVIEW_LIVE_START_RECONNECT = 30_000;
+
+/**
+ * Automatic reconnects a live tile makes in a row without playing in between,
+ * before it stops and waits for the user.
+ */
+export const MULTIVIEW_AUTO_RECONNECT_LIMIT = 3;

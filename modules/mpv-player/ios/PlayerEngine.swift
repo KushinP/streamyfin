@@ -300,6 +300,7 @@ final class MPVPlayerEngine: NSObject {
 			cacheSeconds: config.cacheSeconds,
 			demuxerMaxBytes: config.demuxerMaxBytes,
 			demuxerMaxBackBytes: config.demuxerMaxBackBytes,
+			cachePauseWait: config.cachePauseWait,
 			loadGeneration: currentLoadGeneration
 		)
 

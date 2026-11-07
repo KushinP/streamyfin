@@ -1,18 +1,27 @@
-import { MULTIVIEW_MAX_TILES } from "@/constants/Multiview";
+import {
+  MULTIVIEW_AUTO_RECONNECT_LIMIT,
+  MULTIVIEW_MAX_TILES,
+} from "@/constants/Multiview";
 import {
   addTile,
   applyMultiviewKey,
+  autoReconnectTile,
+  clearTileQualities,
   emptyMultiview,
   isTileMuted,
   type MultiviewState,
+  markTilePlaying,
   playNext,
   promoteTile,
+  reconnectTile,
   removeTile,
   replaceTile,
   selectAudio,
+  setTileQuality,
   tapTile,
   tapWhileToolbar,
   tileFrames,
+  tilePlayerKey,
   toggleAllAudio,
   toggleLayout,
 } from "./multiview";
@@ -289,5 +298,94 @@ describe("applyMultiviewKey", () => {
 
   test("an id it does not know changes nothing", () => {
     expect(applyMultiviewKey(three, "tab-home")).toBe(three);
+  });
+});
+
+describe("per-tile quality and reconnect", () => {
+  const four = { key: "4 Mb/s", value: 4_000_000 };
+  const two = (): MultiviewState =>
+    addTile(addTile(emptyMultiview, "fox", "k-fox"), "abc", "k-abc");
+
+  test("one tile can stream lower than the rest", () => {
+    // Fox stalled at a rate ABC played fine at.
+    const state = setTileQuality(two(), "k-fox", four);
+    expect(state.tiles.find((t) => t.key === "k-fox")?.quality).toEqual(four);
+    expect(state.tiles.find((t) => t.key === "k-abc")?.quality).toBeUndefined();
+  });
+
+  test("an unset quality puts the tile back on the shared setting", () => {
+    const state = setTileQuality(
+      setTileQuality(two(), "k-fox", four),
+      "k-fox",
+      undefined,
+    );
+    expect("quality" in state.tiles[0]).toBe(false);
+  });
+
+  test("choosing a quality for all tiles clears the per-tile ones", () => {
+    const state = clearTileQualities(setTileQuality(two(), "k-fox", four));
+    expect(state.tiles.every((t) => t.quality === undefined)).toBe(true);
+  });
+
+  test("clearing with no per-tile quality changes nothing", () => {
+    const state = two();
+    expect(clearTileQualities(state)).toBe(state);
+  });
+
+  test("reconnecting gives the tile a new player key and keeps the rest", () => {
+    const before = setTileQuality(two(), "k-fox", four);
+    const after = reconnectTile(before, "k-fox");
+    expect(tilePlayerKey(after.tiles[0])).not.toBe(
+      tilePlayerKey(before.tiles[0]),
+    );
+    expect(tilePlayerKey(after.tiles[1])).toBe(tilePlayerKey(before.tiles[1]));
+    expect(after.tiles[0].quality).toEqual(four);
+    expect(after.audio).toBe(before.audio);
+  });
+});
+
+describe("automatic reconnects", () => {
+  const live = (): MultiviewState =>
+    addTile(addTile(emptyMultiview, "fox", "k-fox"), "abc", "k-abc");
+
+  test("a stuck live tile reopens itself, keeping its spot and sound", () => {
+    const before = live();
+    const after = autoReconnectTile(before, "k-fox");
+    expect(tilePlayerKey(after.tiles[0])).not.toBe(
+      tilePlayerKey(before.tiles[0]),
+    );
+    expect(after.tiles.map((t) => t.itemId)).toEqual(["fox", "abc"]);
+    expect(after.audio).toBe(before.audio);
+  });
+
+  test("stops retrying a channel that never plays", () => {
+    let state = live();
+    for (let i = 0; i < MULTIVIEW_AUTO_RECONNECT_LIMIT; i++) {
+      state = autoReconnectTile(state, "k-fox");
+    }
+    expect(autoReconnectTile(state, "k-fox")).toBe(state);
+  });
+
+  test("playing again earns a fresh set of retries", () => {
+    let state = live();
+    for (let i = 0; i < MULTIVIEW_AUTO_RECONNECT_LIMIT; i++) {
+      state = autoReconnectTile(state, "k-fox");
+    }
+    state = markTilePlaying(state, "k-fox");
+    expect(autoReconnectTile(state, "k-fox")).not.toBe(state);
+  });
+
+  test("a manual reconnect also resets the retries", () => {
+    let state = live();
+    for (let i = 0; i < MULTIVIEW_AUTO_RECONNECT_LIMIT; i++) {
+      state = autoReconnectTile(state, "k-fox");
+    }
+    state = reconnectTile(state, "k-fox");
+    expect(autoReconnectTile(state, "k-fox")).not.toBe(state);
+  });
+
+  test("a tile playing normally is left as it is", () => {
+    const state = live();
+    expect(markTilePlaying(state, "k-fox")).toBe(state);
   });
 });

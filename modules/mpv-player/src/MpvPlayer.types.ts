@@ -81,6 +81,13 @@ export type VideoSource = {
     maxBytes?: number;
     /** Maximum backward cache size in MB (default: 50, range: 25-200) */
     maxBackBytes?: number;
+    /**
+     * Seconds of video to have buffered before playback starts, and before it
+     * resumes after the buffer ran dry (mpv `cache-pause-wait`, with
+     * `cache-pause-initial`). Unset keeps mpv's default of 1 s and no wait at
+     * start. iOS and tvOS only.
+     */
+    pauseWaitSeconds?: number;
   };
   /** MPV video output driver (Android only) */
   voDriver?: "gpu-next" | "gpu";

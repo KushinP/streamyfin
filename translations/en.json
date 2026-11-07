@@ -1511,6 +1511,8 @@
     "hear_tile": "Hear tile {{number}}",
     "audio_all": "Play sound from every tile",
     "audio_one": "Play sound from one tile",
+    "quality": "Quality per tile: {{quality}}",
+    "quality_message": "Each tile streams at up to {{quality}}. Changing it restarts every tile, so live channels reconnect.",
     "close": "Close multiview",
     "close_picker": "Close",
     "make_main": "Make this the main tile",

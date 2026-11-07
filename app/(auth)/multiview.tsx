@@ -3,8 +3,14 @@
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
-import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   AppState,
@@ -20,6 +26,7 @@ import { Text } from "@/components/common/Text";
 import { MultiviewPicker } from "@/components/multiview/MultiviewPicker";
 import { MultiviewTile } from "@/components/multiview/MultiviewTile";
 import { useFocused } from "@/components/multiview/useFocused";
+import { useMultiviewQualityPicker } from "@/components/multiview/useMultiviewQualityPicker";
 import { MultiviewColors } from "@/constants/Colors";
 import {
   MULTIVIEW_MAX_TILES,
@@ -51,6 +58,12 @@ import {
 } from "@/utils/multiview/multiview";
 
 const KEEP_AWAKE_TAG = "multiview";
+
+/**
+ * How long, in ms, after the TV quality sheet closes before the quality button
+ * takes the focus back: the sheet's route has to be gone first.
+ */
+const TV_FOCUS_RETURN_DELAY = 300;
 
 /**
  * The route can still be reached by a deep link where multiview cannot run,
@@ -110,6 +123,29 @@ function MultiviewScreen() {
   // which Android's focus search cannot find from one another.
   const [toolbarHandle, setToolbarHandle] = useState<number | null>(null);
   const [firstTileHandle, setFirstTileHandle] = useState<number | null>(null);
+
+  const quality = useMultiviewQualityPicker();
+  // A closed TV option sheet leaves Android TV with nothing focused (see the
+  // android-tv-modal-close-loses-focus fact), so the button that opened it
+  // takes the focus back once this screen is on top again.
+  const qualityButton = useRef<View>(null);
+  const qualityOpened = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!Platform.isTV || !qualityOpened.current) return;
+      qualityOpened.current = false;
+      const timer = setTimeout(
+        () =>
+          (
+            qualityButton.current as
+              | (View & { requestTVFocus?: () => void })
+              | null
+          )?.requestTVFocus?.(),
+        TV_FOCUS_RETURN_DELAY,
+      );
+      return () => clearTimeout(timer);
+    }, []),
+  );
 
   useEffect(() => {
     void lockOrientation(OrientationLock.LANDSCAPE);
@@ -302,6 +338,19 @@ function MultiviewScreen() {
             onPress={() => setState(toggleAllAudio)}
           />
           <ToolbarButton
+            buttonRef={qualityButton}
+            onFocusChange={setToolbarFocused}
+            nextFocusDown={firstTileHandle ?? undefined}
+            icon='speedometer-outline'
+            label={t("multiview.quality", { quality: quality.quality })}
+            disabled={quality.locked}
+            onPress={() => {
+              qualityOpened.current = true;
+              setLastTouch(Date.now());
+              quality.open();
+            }}
+          />
+          <ToolbarButton
             onFocusChange={setToolbarFocused}
             nextFocusDown={firstTileHandle ?? undefined}
             icon='close'
@@ -332,6 +381,7 @@ function ToolbarButton({
   onPress,
   onFocusChange,
   onHandle,
+  buttonRef,
   nextFocusDown,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -341,6 +391,8 @@ function ToolbarButton({
   onFocusChange?: (focused: boolean) => void;
   /** This button's view, for the tiles' Up to reach. */
   onHandle?: (handle: number | null) => void;
+  /** This button's view, for the screen to give the focus back to. */
+  buttonRef?: RefObject<View | null>;
   nextFocusDown?: number;
 }) {
   const { focused, onFocus, onBlur } = useFocused(onFocusChange);
@@ -348,11 +400,10 @@ function ToolbarButton({
   const size = Platform.isTV ? MULTIVIEW_TV_TOOLBAR_BUTTON : 40;
   return (
     <Pressable
-      ref={
-        onHandle
-          ? (view) => onHandle(view ? findNodeHandle(view) : null)
-          : undefined
-      }
+      ref={(view) => {
+        if (buttonRef) buttonRef.current = view;
+        onHandle?.(view ? findNodeHandle(view) : null);
+      }}
       nextFocusDown={nextFocusDown}
       onPress={onPress}
       onFocus={onFocus}

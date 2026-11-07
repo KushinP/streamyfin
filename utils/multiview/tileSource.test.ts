@@ -87,3 +87,22 @@ describe("buildTileSource", () => {
     expect(source.externalSubtitles).toBeUndefined();
   });
 });
+
+describe("buildTileSource's live cushion", () => {
+  const SERVER = "https://jf.example.com";
+  test("a live tile waits for its cushion before starting and resuming", () => {
+    const source = buildTileSource(
+      { url: `${SERVER}/x`, sessionId: null, mediaSource: undefined },
+      { basePath: SERVER, accessToken: undefined, pauseWaitSeconds: 5 },
+    );
+    expect(source.cacheConfig?.pauseWaitSeconds).toBe(5);
+  });
+
+  test("a library tile keeps MPV's default", () => {
+    const source = buildTileSource(
+      { url: `${SERVER}/x`, sessionId: null, mediaSource: undefined },
+      { basePath: SERVER, accessToken: undefined },
+    );
+    expect(source.cacheConfig).not.toHaveProperty("pauseWaitSeconds");
+  });
+});

@@ -27,6 +27,8 @@ export type NativePlayerStreamConfig = {
     cacheSeconds?: number;
     maxBytes?: number;
     maxBackBytes?: number;
+    /** See VideoSource's cacheConfig.pauseWaitSeconds. */
+    pauseWaitSeconds?: number;
   };
   /** Source video dimensions (for zoom-to-fill subtitle compensation). */
   videoWidth?: number;

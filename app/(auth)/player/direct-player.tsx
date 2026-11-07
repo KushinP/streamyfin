@@ -85,6 +85,7 @@ import {
 import { getPrimaryImageUrl } from "@/utils/jellyfin/image/getPrimaryImageUrl";
 import { getStreamUrl } from "@/utils/jellyfin/media/getStreamUrl";
 import { isPlayableItem } from "@/utils/jellyfin/media/isPlayableItem";
+import { livePauseWait } from "@/utils/jellyfin/media/livePauseWait";
 import {
   getPlayMethod,
   type PlayMethod,
@@ -1067,6 +1068,7 @@ export default function DirectPlayerPage() {
         cacheSeconds: settings.mpvCacheSeconds,
         maxBytes: settings.mpvDemuxerMaxBytes,
         maxBackBytes: settings.mpvDemuxerMaxBackBytes,
+        pauseWaitSeconds: livePauseWait(item),
       },
       // Pass VO driver setting (Android only)
       voDriver: settings.mpvVoDriver,

@@ -100,7 +100,8 @@ public class MpvPlayerModule: Module {
           cacheEnabled: cacheConfig?["enabled"] as? String,
           cacheSeconds: self.parseInteger(cacheConfig?["cacheSeconds"]),
           demuxerMaxBytes: self.parseInteger(cacheConfig?["maxBytes"]),
-          demuxerMaxBackBytes: self.parseInteger(cacheConfig?["maxBackBytes"])
+          demuxerMaxBackBytes: self.parseInteger(cacheConfig?["maxBackBytes"]),
+          cachePauseWait: self.parseInteger(cacheConfig?["pauseWaitSeconds"])
         )
 
         // Applied before the load: the renderer keeps the flag and sets it on

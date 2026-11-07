@@ -673,6 +673,7 @@ final class MPVLayerRenderer {
         cacheSeconds: Int? = nil,
         demuxerMaxBytes: Int? = nil,
         demuxerMaxBackBytes: Int? = nil,
+        cachePauseWait: Int? = nil,
         loadGeneration: UInt
     ) {
         queue.async { [weak self] in
@@ -717,6 +718,18 @@ final class MPVLayerRenderer {
             }
             if let maxBackBytes = demuxerMaxBackBytes {
                 self.setProperty(name: "demuxer-max-back-bytes", value: "\(maxBackBytes)MiB")
+            }
+            // A live stream is played a moment behind its live edge, where it
+            // has a buffer to lose: started and resumed with mpv's default of
+            // one second, a channel ran dry at every gap in the feed and
+            // stopped. Set on every load, since the instance outlives the
+            // file: a live channel's wait must not carry over to a movie.
+            if let pauseWait = cachePauseWait, pauseWait > 0 {
+                self.setProperty(name: "cache-pause-wait", value: String(pauseWait))
+                self.setProperty(name: "cache-pause-initial", value: "yes")
+            } else {
+                self.setProperty(name: "cache-pause-wait", value: "1")
+                self.setProperty(name: "cache-pause-initial", value: "no")
             }
 
             // Set start position

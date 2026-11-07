@@ -12,6 +12,7 @@ import type { MpvVideoSource } from "@/modules";
 import { apiAtom, userAtom } from "@/utils/atoms/api";
 import { useSettings } from "@/utils/atoms/settings";
 import { getStreamUrl } from "@/utils/jellyfin/media/getStreamUrl";
+import { livePauseWait } from "@/utils/jellyfin/media/livePauseWait";
 import { writeToLog } from "@/utils/log";
 import { multiviewEngine } from "@/utils/multiview/availability";
 import type { TileQuality } from "@/utils/multiview/multiview";
@@ -197,6 +198,7 @@ export const useMultiviewTileStream = (
             basePath: api.basePath,
             accessToken: api.accessToken,
             startPosition: positionRef.current,
+            pauseWaitSeconds: livePauseWait(item),
           }),
         });
         getSessionApi(api)

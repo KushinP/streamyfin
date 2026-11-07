@@ -24,10 +24,13 @@ export const buildTileSource = (
     basePath,
     accessToken,
     startPosition = 0,
+    pauseWaitSeconds,
   }: {
     basePath: string | undefined;
     accessToken: string | undefined;
     startPosition?: number;
+    /** The live cushion for a channel (livePauseWait); unset for the rest. */
+    pauseWaitSeconds?: number;
   },
 ): VideoSource => {
   const headers: Record<string, string> = {};
@@ -53,7 +56,10 @@ export const buildTileSource = (
     startPosition,
     autoplay: true,
     multiview: true,
-    cacheConfig: { ...MULTIVIEW_TILE_CACHE },
+    cacheConfig: {
+      ...MULTIVIEW_TILE_CACHE,
+      ...(pauseWaitSeconds !== undefined && { pauseWaitSeconds }),
+    },
     ...(Object.keys(withLanguage).length > 0 && { headers: withLanguage }),
     ...(externalSubtitles.length > 0 && { externalSubtitles }),
   };

@@ -31,6 +31,7 @@ import {
 import { withAcceptLanguageForUrl } from "@/utils/jellyfin/acceptLanguage";
 import { getPrimaryImageUrl } from "@/utils/jellyfin/image/getPrimaryImageUrl";
 import { getStreamUrl } from "@/utils/jellyfin/media/getStreamUrl";
+import { livePauseWait } from "@/utils/jellyfin/media/livePauseWait";
 import {
   getPlayMethod,
   type PlayMethod,
@@ -542,6 +543,7 @@ export async function buildNativePlayerConfig(params: {
         cacheSeconds: settings.mpvCacheSeconds,
         maxBytes: settings.mpvDemuxerMaxBytes,
         maxBackBytes: settings.mpvDemuxerMaxBackBytes,
+        pauseWaitSeconds: livePauseWait(item),
       },
       videoWidth: videoDimensions.width,
       videoHeight: videoDimensions.height,

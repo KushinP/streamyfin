@@ -552,3 +552,81 @@ describe("the tile's own menu", () => {
     expect(screen.queryByLabelText("multiview.tile_menu")).toBeNull();
   });
 });
+
+describe("a live channel that stops receiving video", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockItem = { Id: "chan-1", Name: "WFXT", Type: "TvChannel" };
+  });
+  afterEach(() => jest.useRealTimers());
+
+  const renderLive = (onStuck: () => void, onPlaying = jest.fn()) =>
+    render(
+      <QueryWrapper>
+        <MultiviewTile
+          itemId={mockItem.Id}
+          frame={{ left: 0, top: 0, width: 320, height: 180 }}
+          muted
+          heard={false}
+          showLabel
+          onPress={jest.fn()}
+          onLongPress={jest.fn()}
+          onStuck={onStuck}
+          onPlaying={onPlaying}
+        />
+      </QueryWrapper>,
+    );
+
+  test("asks to reconnect once stalled past the live cushion", async () => {
+    // Seen on the Mac: the server stopped sending a live session's video and
+    // MPV waited without end, logging nothing; a manual reconnect brought the
+    // channel back.
+    const onStuck = jest.fn();
+    const onPlaying = jest.fn();
+    await renderLive(onStuck, onPlaying);
+    await tick(0, 0);
+    await tick(1, 0);
+    await tick(2, 0);
+    expect(onPlaying).toHaveBeenCalled();
+
+    // The stall is noticed first, then the reconnect waits out the cushion.
+    await act(async () => jest.advanceTimersByTime(3_000));
+    await act(async () => jest.advanceTimersByTime(8_000));
+    expect(onStuck).not.toHaveBeenCalled();
+    await act(async () => jest.advanceTimersByTime(5_000));
+    expect(onStuck).toHaveBeenCalledTimes(1);
+  });
+
+  test("a channel that recovers by itself is left alone", async () => {
+    const onStuck = jest.fn();
+    await renderLive(onStuck);
+    await tick(0, 0);
+    await tick(1, 0);
+    await tick(2, 0);
+    await act(async () => jest.advanceTimersByTime(6_000));
+    // The cushion refilled and the picture moves again.
+    await tick(3, 0);
+    await act(async () => jest.advanceTimersByTime(8_000));
+    expect(onStuck).not.toHaveBeenCalled();
+  });
+
+  test("a channel that never shows a first frame asks too, but later", async () => {
+    const onStuck = jest.fn();
+    await renderLive(onStuck);
+    await act(async () => jest.advanceTimersByTime(20_000));
+    expect(onStuck).not.toHaveBeenCalled();
+    await act(async () => jest.advanceTimersByTime(15_000));
+    expect(onStuck).toHaveBeenCalledTimes(1);
+  });
+
+  test("a paused channel is not reconnected", async () => {
+    const onStuck = jest.fn();
+    await renderLive(onStuck);
+    await tick(0, 0);
+    await tick(1, 0);
+    await tick(2, 0);
+    await playerState({ isPaused: true });
+    await act(async () => jest.advanceTimersByTime(60_000));
+    expect(onStuck).not.toHaveBeenCalled();
+  });
+});

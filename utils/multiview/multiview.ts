@@ -1,4 +1,5 @@
 import {
+  MULTIVIEW_AUTO_RECONNECT_LIMIT,
   MULTIVIEW_FOCUS_MAIN_RATIO,
   MULTIVIEW_MAX_TILES,
   MULTIVIEW_TILE_GAP,
@@ -26,6 +27,11 @@ export interface MultiviewTile {
   quality?: TileQuality;
   /** Counts reconnects; part of the tile's React key, so a bump reopens it. */
   generation?: number;
+  /**
+   * Reconnects made on the tile's own since it last played, so a channel that
+   * cannot be opened at all stops being retried (MULTIVIEW_AUTO_RECONNECT_LIMIT).
+   */
+  autoReconnects?: number;
 }
 
 /** A quality cap: its label and bits per second, undefined for no cap. */
@@ -163,12 +169,61 @@ export const reconnectTile = (
   key: string,
 ): MultiviewState => ({
   ...state,
-  tiles: state.tiles.map((tile) =>
-    tile.key === key
-      ? { ...tile, generation: (tile.generation ?? 0) + 1 }
-      : tile,
-  ),
+  tiles: state.tiles.map((tile) => {
+    if (tile.key !== key) return tile;
+    // Asked for by hand: a fresh start, with a fresh budget of retries.
+    const { autoReconnects: _spent, ...rest } = tile;
+    return { ...rest, generation: (tile.generation ?? 0) + 1 };
+  }),
 });
+
+/**
+ * A live tile that stopped receiving video reconnects itself, as a manual
+ * Reconnect does. The server can stop sending a live session's stream while
+ * the connection stays open, and the player then waits without end; a fresh
+ * connection brings the channel back. Refused past
+ * MULTIVIEW_AUTO_RECONNECT_LIMIT tries without the tile playing in between,
+ * so a channel that cannot be opened is not retried forever.
+ */
+export const autoReconnectTile = (
+  state: MultiviewState,
+  key: string,
+): MultiviewState => {
+  const tile = state.tiles.find((t) => t.key === key);
+  if (!tile) return state;
+  const spent = tile.autoReconnects ?? 0;
+  if (spent >= MULTIVIEW_AUTO_RECONNECT_LIMIT) return state;
+  return {
+    ...state,
+    tiles: state.tiles.map((t) =>
+      t.key === key
+        ? {
+            ...t,
+            generation: (t.generation ?? 0) + 1,
+            autoReconnects: spent + 1,
+          }
+        : t,
+    ),
+  };
+};
+
+/** The tile plays again: its automatic reconnects start over. */
+export const markTilePlaying = (
+  state: MultiviewState,
+  key: string,
+): MultiviewState => {
+  if (!state.tiles.some((t) => t.key === key && t.autoReconnects)) {
+    return state;
+  }
+  return {
+    ...state,
+    tiles: state.tiles.map((t) => {
+      if (t.key !== key) return t;
+      const { autoReconnects: _spent, ...rest } = t;
+      return rest;
+    }),
+  };
+};
 
 /** The React key of a tile's player: a new one closes and reopens the stream. */
 export const tilePlayerKey = (tile: MultiviewTile): string =>

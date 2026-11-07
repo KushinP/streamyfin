@@ -18,6 +18,8 @@ import { Colors, MultiviewColors } from "@/constants/Colors";
 import {
   MULTIVIEW_ADJACENT_EPISODES,
   MULTIVIEW_EOF_PAUSE_TOLERANCE,
+  MULTIVIEW_LIVE_STALL_RECONNECT,
+  MULTIVIEW_LIVE_START_RECONNECT,
   MULTIVIEW_SEEK_BACK_SECONDS,
   MULTIVIEW_SEEK_FORWARD_SECONDS,
   MULTIVIEW_STALL_DELAY,
@@ -74,6 +76,13 @@ interface Props {
   qualityKey?: string;
   /** Shows what the server sends and what the player decodes. */
   showStats?: boolean;
+  /**
+   * A live channel stopped receiving video, or never started: the screen
+   * reconnects it (autoReconnectTile).
+   */
+  onStuck?: () => void;
+  /** The tile's video moves: its automatic reconnects start over. */
+  onPlaying?: () => void;
 }
 
 // Several players at once: MPV on iOS; on Android TV, ExoPlayer, since
@@ -99,6 +108,8 @@ export function MultiviewTile({
   quality,
   qualityKey,
   showStats,
+  onStuck,
+  onPlaying,
 }: Props) {
   const { t } = useTranslation();
   const { showActionSheetWithOptions } = useActionSheet();
@@ -193,6 +204,32 @@ export function MultiviewTile({
     },
     [onPosition, playing, playbackStarted],
   );
+
+  // Read through refs: the screen passes new functions every render, and the
+  // timers below must not restart for that.
+  const onStuckRef = useRef(onStuck);
+  onStuckRef.current = onStuck;
+  const onPlayingRef = useRef(onPlaying);
+  onPlayingRef.current = onPlaying;
+
+  useEffect(() => {
+    if (playing) onPlayingRef.current?.();
+  }, [playing]);
+
+  // A live channel whose server stops sending keeps its connection open and
+  // MPV waits for it without end, logging nothing; only a fresh connection
+  // brings the channel back. So a channel stalled past the live cushion, or
+  // one that never shows a first frame, asks to be reconnected. A pause is
+  // the user's, and is left alone.
+  useEffect(() => {
+    if (!isChannel || paused) return;
+    if (playing && !stalled) return;
+    const timer = setTimeout(
+      () => onStuckRef.current?.(),
+      playing ? MULTIVIEW_LIVE_STALL_RECONNECT : MULTIVIEW_LIVE_START_RECONNECT,
+    );
+    return () => clearTimeout(timer);
+  }, [isChannel, paused, playing, stalled]);
 
   // Asked for only once an episode has ended, the one moment it is wanted.
   const nextEpisode = useQuery({

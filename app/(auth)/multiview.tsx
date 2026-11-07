@@ -43,12 +43,14 @@ import { isMultiviewAvailable } from "@/utils/multiview/availability";
 import {
   addTile,
   applyMultiviewKey,
+  autoReconnectTile,
   clearTileQualities,
   emptyMultiview,
   isTileMuted,
   MULTIVIEW_HEAR_KEY_PREFIX,
   MULTIVIEW_LAYOUT_KEY,
   type MultiviewState,
+  markTilePlaying,
   playNext,
   promoteTile,
   reconnectTile,
@@ -332,6 +334,8 @@ function MultiviewScreen() {
               quality={tile.quality}
               qualityKey={tile.quality?.key ?? quality.quality}
               showStats={statsTiles.has(tile.key)}
+              onStuck={() => setState((s) => autoReconnectTile(s, tile.key))}
+              onPlaying={() => setState((s) => markTilePlaying(s, tile.key))}
             />
           ) : null,
         )}

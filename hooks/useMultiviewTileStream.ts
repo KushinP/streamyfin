@@ -6,6 +6,7 @@ import { getLibraryApi, getSessionApi } from "@jellyfin/sdk/lib/utils/api";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
+import { MULTIVIEW_STOP_WAIT_LIMIT } from "@/constants/Multiview";
 import { PROGRESS_REPORT_INTERVAL } from "@/constants/Playback";
 import type { MpvVideoSource } from "@/modules";
 import { apiAtom, userAtom } from "@/utils/atoms/api";
@@ -29,6 +30,32 @@ type TileStreamState =
       /** What the server is sending, its subtitle streams among it. */
       mediaSource: MediaSourceInfo | undefined;
     };
+
+/**
+ * Stop reports still on their way, across every tile. A live stream holds one
+ * tuner until its stop arrives, and a dual tuner has two: a quality change or
+ * a reconnect closes a tile's stream and opens a new one at once, and with two
+ * live tiles doing that together the new ones asked for tuners the old ones
+ * still held, and spun. So a tile waits for these before it opens a stream.
+ */
+const pendingStops = new Set<Promise<unknown>>();
+
+const trackStop = (stop: Promise<unknown>) => {
+  pendingStops.add(stop);
+  void stop.finally(() => pendingStops.delete(stop));
+  return stop;
+};
+
+/** Waits for the stops in flight, but never past MULTIVIEW_STOP_WAIT_LIMIT. */
+const stopsSettled = () =>
+  pendingStops.size === 0
+    ? Promise.resolve()
+    : Promise.race([
+        Promise.allSettled([...pendingStops]),
+        new Promise((resolve) =>
+          setTimeout(resolve, MULTIVIEW_STOP_WAIT_LIMIT),
+        ),
+      ]);
 
 const errorText = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -97,23 +124,26 @@ export const useMultiviewTileStream = (
       item: BaseItemDto;
       stream: TileStream;
     }) =>
-      getSessionApi(api)
-        .reportPlaybackStopped({
-          playbackStopInfo: {
-            ItemId: session.item.Id,
-            MediaSourceId: session.stream.mediaSource?.Id ?? undefined,
-            PlaySessionId: session.stream.sessionId ?? undefined,
-            LiveStreamId: session.stream.mediaSource?.LiveStreamId ?? undefined,
-            PositionTicks: secondsToTicks(positionRef.current),
-          },
-        })
-        .catch((error) =>
-          writeToLog(
-            "ERROR",
-            "multiview: stop report failed",
-            errorText(error),
+      trackStop(
+        getSessionApi(api)
+          .reportPlaybackStopped({
+            playbackStopInfo: {
+              ItemId: session.item.Id,
+              MediaSourceId: session.stream.mediaSource?.Id ?? undefined,
+              PlaySessionId: session.stream.sessionId ?? undefined,
+              LiveStreamId:
+                session.stream.mediaSource?.LiveStreamId ?? undefined,
+              PositionTicks: secondsToTicks(positionRef.current),
+            },
+          })
+          .catch((error) =>
+            writeToLog(
+              "ERROR",
+              "multiview: stop report failed",
+              errorText(error),
+            ),
           ),
-        );
+      );
 
     const open = async () => {
       setState({ status: "loading" });
@@ -127,6 +157,9 @@ export const useMultiviewTileStream = (
           item.Type === "TvChannel"
             ? 0
             : (item.UserData?.PlaybackPositionTicks ?? 0);
+        // Opening a stream can take a tuner a closing tile still holds.
+        await stopsSettled();
+        if (cancelled) return;
         const res = await getStreamUrl({
           api,
           item,

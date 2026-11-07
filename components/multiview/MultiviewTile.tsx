@@ -402,6 +402,23 @@ export function MultiviewTile({
           </View>
         )}
       </Pressable>
+      {/* The tile's own menu (quality, stats, reconnect), in sight: press
+          and hold is not something a mouse user tries, and a live channel
+          has no other buttons. Also while loading, the moment Reconnect is
+          wanted. A TV remote holds Select for it instead: a second focus
+          stop inside every tile would get in the way of moving between them. */}
+      {showLabel && !Platform.isTV && (
+        <Pressable
+          testID='multiview-tile-menu'
+          onPress={onLongPress}
+          hitSlop={6}
+          accessibilityRole='button'
+          accessibilityLabel={t("multiview.tile_menu")}
+          style={styles.menuButton}
+        >
+          <Ionicons name='ellipsis-horizontal' size={16} color='white' />
+        </Pressable>
+      )}
       {ended && (
         <View style={[styles.center, styles.endedCard]}>
           <Text className='text-white font-bold mb-2'>
@@ -537,6 +554,17 @@ const styles = StyleSheet.create({
     left: 0,
     alignItems: "center",
     justifyContent: "center",
+  },
+  menuButton: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
   label: {
     position: "absolute",

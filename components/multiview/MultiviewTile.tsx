@@ -32,9 +32,10 @@ import {
   isBurnedInSubtitle,
 } from "@/utils/jellyfin/subtitleUtils";
 import { multiviewEngine } from "@/utils/multiview/availability";
-import type { TileFrame } from "@/utils/multiview/multiview";
+import type { TileFrame, TileQuality } from "@/utils/multiview/multiview";
 import { createPlaybackStartWatch } from "@/utils/multiview/playbackStart";
 import { isAtEnd, nextEpisodeIn } from "@/utils/multiview/tilePlayback";
+import { MultiviewTileStats } from "./MultiviewTileStats";
 import { useFocused } from "./useFocused";
 
 interface Props {
@@ -67,6 +68,12 @@ interface Props {
   nextFocusUp?: number;
   /** The tile's focusable view, for the toolbar's Down to come back to. */
   onTargetRef?: (handle: number | null) => void;
+  /** This tile's own quality cap; unset, it follows the shared setting. */
+  quality?: TileQuality;
+  /** The cap in force, own or shared, for the stats overlay. */
+  qualityKey?: string;
+  /** Shows what the server sends and what the player decodes. */
+  showStats?: boolean;
 }
 
 // Several players at once: MPV on iOS; on Android TV, ExoPlayer, since
@@ -89,6 +96,9 @@ export function MultiviewTile({
   hasTVPreferredFocus,
   nextFocusUp,
   onTargetRef,
+  quality,
+  qualityKey,
+  showStats,
 }: Props) {
   const { t } = useTranslation();
   const { showActionSheetWithOptions } = useActionSheet();
@@ -102,7 +112,10 @@ export function MultiviewTile({
     playerRef.current = player;
     if (player) lastPlayer.current = player;
   }, []);
-  const { state, onPosition, onPaused } = useMultiviewTileStream(itemId);
+  const { state, onPosition, onPaused } = useMultiviewTileStream(
+    itemId,
+    quality,
+  );
   // Read when the source is built and from onLoad: a mute that arrives over
   // the bridge after an autoplaying file has started is heard for a moment.
   const mutedRef = useRef(muted);
@@ -336,6 +349,14 @@ export function MultiviewTile({
         >
           <Loader />
         </View>
+      )}
+      {showStats && state.status === "ready" && (
+        <MultiviewTileStats
+          playerRef={playerRef}
+          mediaSource={state.mediaSource}
+          qualityKey={qualityKey ?? quality?.key ?? ""}
+          tileOwnQuality={!!quality}
+        />
       )}
       {state.status === "error" && (
         <View style={styles.center}>

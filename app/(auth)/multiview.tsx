@@ -43,6 +43,7 @@ import { isMultiviewAvailable } from "@/utils/multiview/availability";
 import {
   addTile,
   applyMultiviewKey,
+  clearTileQualities,
   emptyMultiview,
   isTileMuted,
   MULTIVIEW_HEAR_KEY_PREFIX,
@@ -50,9 +51,12 @@ import {
   type MultiviewState,
   playNext,
   promoteTile,
+  reconnectTile,
   removeTile,
+  setTileQuality,
   tapWhileToolbar,
   tileFrames,
+  tilePlayerKey,
   toggleAllAudio,
   toggleLayout,
 } from "@/utils/multiview/multiview";
@@ -123,6 +127,11 @@ function MultiviewScreen() {
   // which Android's focus search cannot find from one another.
   const [toolbarHandle, setToolbarHandle] = useState<number | null>(null);
   const [firstTileHandle, setFirstTileHandle] = useState<number | null>(null);
+  // Tiles showing their stats overlay, by tile key. Screen state only: stats
+  // are for looking into a stall, not something to keep across visits.
+  const [statsTiles, setStatsTiles] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
   const quality = useMultiviewQualityPicker();
   // A closed TV option sheet leaves Android TV with nothing focused (see the
@@ -217,24 +226,56 @@ function MultiviewScreen() {
     [toolbarVisible],
   );
 
+  // Read by the menu through a ref, so the callback stays the same while the
+  // tiles change.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const statsRef = useRef(statsTiles);
+  statsRef.current = statsTiles;
+
   const onTileLongPress = useCallback(
-    (key: string) =>
+    (key: string) => {
+      const tile = stateRef.current.tiles.find((t) => t.key === key);
+      if (!tile) return;
+      const statsOn = statsRef.current.has(key);
+      // Make main, Quality, Stats, Reconnect, Remove, Cancel.
+      const options = [
+        t("multiview.make_main"),
+        t("multiview.tile_quality", {
+          quality: tile.quality?.key ?? quality.quality,
+        }),
+        statsOn ? t("multiview.stats_hide") : t("multiview.stats_show"),
+        t("multiview.reconnect"),
+        t("multiview.remove_tile"),
+        t("common.cancel"),
+      ];
       showActionSheetWithOptions(
         {
-          options: [
-            t("multiview.make_main"),
-            t("multiview.remove_tile"),
-            t("common.cancel"),
-          ],
-          destructiveButtonIndex: 1,
-          cancelButtonIndex: 2,
+          options,
+          destructiveButtonIndex: 4,
+          cancelButtonIndex: 5,
         },
         (index) => {
           if (index === 0) setState((s) => promoteTile(s, key));
-          if (index === 1) setState((s) => removeTile(s, key));
+          if (index === 1) {
+            quality.openTile(tile.quality, (next) =>
+              setState((s) => setTileQuality(s, key, next)),
+            );
+          }
+          if (index === 2) {
+            setStatsTiles((current) => {
+              const next = new Set(current);
+              if (statsOn) next.delete(key);
+              else next.add(key);
+              return next;
+            });
+          }
+          if (index === 3) setState((s) => reconnectTile(s, key));
+          if (index === 4) setState((s) => removeTile(s, key));
         },
-      ),
-    [showActionSheetWithOptions, t],
+      );
+    },
+    [showActionSheetWithOptions, t, quality],
   );
 
   const area = {
@@ -266,9 +307,10 @@ function MultiviewScreen() {
         {state.tiles.map((tile, i) =>
           frames[i] ? (
             <MultiviewTile
-              // The item is part of the key: a tile that moves on to the next
-              // episode starts over as a fresh player and closes the old stream.
-              key={`${tile.key}:${tile.itemId}`}
+              // The item and the reconnect count are part of the key: a tile
+              // that moves on to the next episode, or is reconnected, starts
+              // over as a fresh player and closes the old stream.
+              key={tilePlayerKey(tile)}
               itemId={tile.itemId}
               frame={frames[i]}
               muted={isTileMuted(state, tile.key)}
@@ -287,6 +329,9 @@ function MultiviewScreen() {
               hasTVPreferredFocus={Platform.isTV && i === 0}
               nextFocusUp={toolbarHandle ?? undefined}
               onTargetRef={i === 0 ? setFirstTileHandle : undefined}
+              quality={tile.quality}
+              qualityKey={tile.quality?.key ?? quality.quality}
+              showStats={statsTiles.has(tile.key)}
             />
           ) : null,
         )}
@@ -347,7 +392,8 @@ function MultiviewScreen() {
             onPress={() => {
               qualityOpened.current = true;
               setLastTouch(Date.now());
-              quality.open();
+              // A quality for all tiles replaces the ones set per tile.
+              quality.openShared(() => setState(clearTileQualities));
             }}
           />
           <ToolbarButton

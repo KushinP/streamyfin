@@ -13,6 +13,7 @@ import { useSettings } from "@/utils/atoms/settings";
 import { getStreamUrl } from "@/utils/jellyfin/media/getStreamUrl";
 import { writeToLog } from "@/utils/log";
 import { multiviewEngine } from "@/utils/multiview/availability";
+import type { TileQuality } from "@/utils/multiview/multiview";
 import { tileMaxBitrate } from "@/utils/multiview/tileBitrate";
 import { buildTileSource, type TileStream } from "@/utils/multiview/tileSource";
 import { generateDeviceProfile } from "@/utils/profiles/native";
@@ -41,14 +42,18 @@ const errorText = (error: unknown) =>
  * single usable channel until the server times it out. So the stop goes out
  * on every exit, including a tile removed while its stream was still opening.
  */
-export const useMultiviewTileStream = (itemId: string) => {
+export const useMultiviewTileStream = (
+  itemId: string,
+  /** The tile's own quality cap, over the multiview setting. */
+  quality?: TileQuality,
+) => {
   const api = useAtomValue(apiAtom);
   const user = useAtomValue(userAtom);
   const { settings } = useSettings();
   const audioMode = settings?.audioTranscodeMode;
   // The multiview quality: tiles at the source's full rate stalled, live
   // channels first (tileMaxBitrate).
-  const maxBitrate = tileMaxBitrate(settings ?? {});
+  const maxBitrate = tileMaxBitrate(settings ?? {}, quality);
   const [state, setState] = useState<TileStreamState>({ status: "loading" });
   // Seconds; the stop report saves it as the resume point of a library item.
   const positionRef = useRef(0);

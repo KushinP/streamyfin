@@ -81,3 +81,6 @@ export const MULTIVIEW_TILE_CACHE = {
 
 /** Size, in points, of a multiview toolbar button on a TV. */
 export const MULTIVIEW_TV_TOOLBAR_BUTTON = 56;
+
+/** How often, in ms, an open stats overlay asks its tile's player for numbers. */
+export const MULTIVIEW_STATS_INTERVAL = 1_000;
